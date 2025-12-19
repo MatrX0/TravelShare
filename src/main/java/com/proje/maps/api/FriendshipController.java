@@ -1,11 +1,11 @@
 package com.proje.maps.api;
 
 import com.proje.maps.dto.*;
+import com.proje.maps.exception.BadRequestException;
+import com.proje.maps.exception.ResourceNotFoundException;
 import com.proje.maps.service.FriendshipService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,7 +13,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/friends")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
-public class FriendshipController {
+@Tag(name = "Friends", description = "Friendship management endpoints")
+public class FriendshipController extends BaseController {
     
     private final FriendshipService friendshipService;
     
@@ -21,114 +22,164 @@ public class FriendshipController {
         this.friendshipService = friendshipService;
     }
     
-    // Get friends list
     @GetMapping
-    public ResponseEntity<ApiResponse<List<FriendDTO>>> getFriends(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getCurrentUserId(userDetails);
-        List<FriendDTO> friends = friendshipService.getFriends(userId);
-        return ResponseEntity.ok(ApiResponse.success(friends));
-    }
-    
-    // Get pending requests
-    @GetMapping("/requests")
-    public ResponseEntity<ApiResponse<List<FriendRequestDTO>>> getPendingRequests(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getCurrentUserId(userDetails);
-        List<FriendRequestDTO> requests = friendshipService.getPendingRequests(userId);
-        return ResponseEntity.ok(ApiResponse.success(requests));
-    }
-    
-    // Get sent requests
-    @GetMapping("/requests/sent")
-    public ResponseEntity<ApiResponse<List<FriendRequestDTO>>> getSentRequests(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getCurrentUserId(userDetails);
-        List<FriendRequestDTO> requests = friendshipService.getSentRequests(userId);
-        return ResponseEntity.ok(ApiResponse.success(requests));
-    }
-    
-    // Send friend request
-    @PostMapping("/request")
-    public ResponseEntity<ApiResponse<FriendRequestDTO>> sendFriendRequest(
-            @Valid @RequestBody SendFriendRequestRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @Operation(summary = "Get friends list", description = "Retrieve all friends of the current user")
+    public ResponseEntity<ApiResponse<List<FriendDTO>>> getFriends() {
         try {
-            Long userId = getCurrentUserId(userDetails);
-            FriendRequestDTO friendRequest = friendshipService.sendFriendRequest(userId, request.getFriendUserId());
-            return ResponseEntity.ok(ApiResponse.success("Friend request sent", friendRequest));
+            Long userId = getCurrentUserId();
+            List<FriendDTO> friends = friendshipService.getFriends(userId);
+            return ResponseEntity.ok(ApiResponse.success(friends));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            throw new BadRequestException("Failed to retrieve friends: " + e.getMessage());
         }
     }
     
-    // Accept friend request
-    @PostMapping("/accept/{requestId}")
-    public ResponseEntity<ApiResponse<FriendDTO>> acceptFriendRequest(
-            @PathVariable Long requestId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/requests")
+    @Operation(summary = "Get pending requests", description = "Retrieve all pending friend requests received by the current user")
+    public ResponseEntity<ApiResponse<List<FriendRequestDTO>>> getPendingRequests() {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
+            List<FriendRequestDTO> requests = friendshipService.getPendingRequests(userId);
+            return ResponseEntity.ok(ApiResponse.success(requests));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to retrieve pending requests: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/requests/sent")
+    @Operation(summary = "Get sent requests", description = "Retrieve all friend requests sent by the current user")
+    public ResponseEntity<ApiResponse<List<FriendRequestDTO>>> getSentRequests() {
+        try {
+            Long userId = getCurrentUserId();
+            List<FriendRequestDTO> requests = friendshipService.getSentRequests(userId);
+            return ResponseEntity.ok(ApiResponse.success(requests));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to retrieve sent requests: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/request")
+    @Operation(summary = "Send friend request", description = "Send a friend request to another user")
+    public ResponseEntity<ApiResponse<FriendRequestDTO>> sendFriendRequest(
+            @Valid @RequestBody SendFriendRequestRequest request) {
+        try {
+            Long userId = getCurrentUserId();
+            
+            // Prevent sending request to self
+            if (userId.equals(request.getFriendUserId())) {
+                throw new BadRequestException("Cannot send friend request to yourself");
+            }
+            
+            FriendRequestDTO friendRequest = friendshipService.sendFriendRequest(
+                userId, request.getFriendUserId()
+            );
+            return ResponseEntity.ok(ApiResponse.success("Friend request sent", friendRequest));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to send friend request: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/accept/{requestId}")
+    @Operation(summary = "Accept friend request", description = "Accept a pending friend request")
+    public ResponseEntity<ApiResponse<FriendDTO>> acceptFriendRequest(@PathVariable Long requestId) {
+        try {
+            Long userId = getCurrentUserId();
             FriendDTO friend = friendshipService.acceptFriendRequest(requestId, userId);
             return ResponseEntity.ok(ApiResponse.success("Friend request accepted", friend));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (ResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            throw new BadRequestException("Failed to accept friend request: " + e.getMessage());
         }
     }
     
-    // Reject friend request
     @PostMapping("/reject/{requestId}")
-    public ResponseEntity<ApiResponse<Void>> rejectFriendRequest(
-            @PathVariable Long requestId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @Operation(summary = "Reject friend request", description = "Reject a pending friend request")
+    public ResponseEntity<ApiResponse<Void>> rejectFriendRequest(@PathVariable Long requestId) {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
             friendshipService.rejectFriendRequest(requestId, userId);
             return ResponseEntity.ok(ApiResponse.success("Friend request rejected", null));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (ResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            throw new BadRequestException("Failed to reject friend request: " + e.getMessage());
         }
     }
     
-    // Remove friend
     @DeleteMapping("/{friendUserId}")
-    public ResponseEntity<ApiResponse<Void>> removeFriend(
-            @PathVariable Long friendUserId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @Operation(summary = "Remove friend", description = "Remove a user from friends list")
+    public ResponseEntity<ApiResponse<Void>> removeFriend(@PathVariable Long friendUserId) {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
             friendshipService.removeFriend(userId, friendUserId);
             return ResponseEntity.ok(ApiResponse.success("Friend removed", null));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            throw new BadRequestException("Failed to remove friend: " + e.getMessage());
         }
     }
     
-    // Block user
     @PostMapping("/block/{blockedUserId}")
-    public ResponseEntity<ApiResponse<Void>> blockUser(
-            @PathVariable Long blockedUserId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @Operation(summary = "Block user", description = "Block a user from sending messages or friend requests")
+    public ResponseEntity<ApiResponse<Void>> blockUser(@PathVariable Long blockedUserId) {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
+            
+            // Prevent blocking self
+            if (userId.equals(blockedUserId)) {
+                throw new BadRequestException("Cannot block yourself");
+            }
+            
             friendshipService.blockUser(userId, blockedUserId);
             return ResponseEntity.ok(ApiResponse.success("User blocked", null));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            throw new BadRequestException("Failed to block user: " + e.getMessage());
         }
     }
     
-    // Check friendship status
-    @GetMapping("/status/{friendUserId}")
-    public ResponseEntity<ApiResponse<String>> getFriendshipStatus(
-            @PathVariable Long friendUserId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getCurrentUserId(userDetails);
-        String status = friendshipService.getFriendshipStatus(userId, friendUserId);
-        return ResponseEntity.ok(ApiResponse.success(status));
+    @PostMapping("/unblock/{blockedUserId}")
+    @Operation(summary = "Unblock user", description = "Unblock a previously blocked user")
+    public ResponseEntity<ApiResponse<Void>> unblockUser(@PathVariable Long blockedUserId) {
+        try {
+            Long userId = getCurrentUserId();
+            friendshipService.unblockUser(userId, blockedUserId);
+            return ResponseEntity.ok(ApiResponse.success("User unblocked", null));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to unblock user: " + e.getMessage());
+        }
     }
     
-    private Long getCurrentUserId(UserDetails userDetails) {
-        return 1L; // TODO: Get from UserDetails
+    @GetMapping("/status/{friendUserId}")
+    @Operation(summary = "Check friendship status", description = "Get friendship status with another user")
+    public ResponseEntity<ApiResponse<String>> getFriendshipStatus(@PathVariable Long friendUserId) {
+        try {
+            Long userId = getCurrentUserId();
+            String status = friendshipService.getFriendshipStatus(userId, friendUserId);
+            return ResponseEntity.ok(ApiResponse.success(status));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to get friendship status: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/search")
+    @Operation(summary = "Search users", description = "Search for users by name or email")
+    public ResponseEntity<ApiResponse<List<UserDTO>>> searchUsers(@RequestParam String query) {
+        try {
+            Long userId = getCurrentUserId();
+            List<UserDTO> users = friendshipService.searchUsers(query, userId);
+            return ResponseEntity.ok(ApiResponse.success(users));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to search users: " + e.getMessage());
+        }
     }
 }

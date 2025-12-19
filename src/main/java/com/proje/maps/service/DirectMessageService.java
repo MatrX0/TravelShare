@@ -156,4 +156,9 @@ public class DirectMessageService {
         dto.setReadAt(message.getReadAt());
         return dto;
     }
+
+    public void deleteMessage(Long messageId, Long userId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'deleteMessage'");
+    }
 }

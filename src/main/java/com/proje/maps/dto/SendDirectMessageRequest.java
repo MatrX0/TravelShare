@@ -41,4 +41,9 @@ public class SendDirectMessageRequest {
     public String toString() {
         return "SendDirectMessageRequest{receiverId=" + receiverId + '}';
     }
+
+    public Object getContent() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getContent'");
+    }
 }

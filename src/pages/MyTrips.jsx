@@ -58,7 +58,7 @@ function MyTrips({ onNavigate, darkMode }) {
 
       {/* TravelShare Logo Header */}
       <div className="page-header">
-                <div className="logo" onClick={() => onNavigate('home')} style={{ cursor: 'pointer' }}>
+                <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
                     <span className="logo-icon">✈️</span>
                     <span className="logo-text">TravelShare</span>
                 </div>

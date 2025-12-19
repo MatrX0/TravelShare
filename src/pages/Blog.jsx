@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './styles/Blog.css';
 import api from '../services/api.js';
 
-function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
+function Blog({ user, onLogout, darkMode, toggleDarkMode }) {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [blogPosts, setBlogPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,11 +26,15 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
     { id: 'GUIDES', name: 'Guides', icon: '🗺️' },
   ];
 
-  // Grupları ve blogları çek
   useEffect(() => {
     fetchGroups();
-    fetchAllBlogs();
   }, []);
+
+  useEffect(() => {
+    if (groups.length > 0) {
+      fetchAllBlogs();
+    }
+  }, [groups]);
 
   const fetchGroups = async () => {
     try {
@@ -44,7 +50,6 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
   const fetchAllBlogs = async () => {
     setLoading(true);
     try {
-      // Tüm grupların bloglarını çek
       const allBlogs = [];
       for (const group of groups) {
         try {
@@ -93,7 +98,6 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
         alert('Blog created successfully!');
         setNewBlog({ title: '', content: '', imageUrl: '' });
         setShowCreateForm(false);
-        // Blogları yeniden çek
         if (selectedGroup) {
           fetchGroupBlogs(selectedGroup.id);
         } else {
@@ -104,6 +108,17 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
       console.error('Error creating blog:', error);
       alert('Failed to create blog. Please try again.');
     }
+  };
+
+  const handleNavigation = (path) => {
+    setShowUserMenu(false);
+    navigate(path);
+  };
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    onLogout();
+    navigate('/');
   };
 
   const filteredPosts = selectedCategory === 'ALL'
@@ -117,7 +132,7 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
 
       {/* TravelShare Logo Header */}
       <div className="page-header">
-        <div className="logo" onClick={() => onNavigate('home')} style={{ cursor: 'pointer' }}>
+        <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
           <span className="logo-icon">✈️</span>
           <span className="logo-text">TravelShare</span>
         </div>
@@ -141,23 +156,23 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
                     <small>{user.email}</small>
                   </div>
                   <div className="dropdown-divider"></div>
-                  <button className="dropdown-item" onClick={() => onNavigate('profile')}>
+                  <button className="dropdown-item" onClick={() => handleNavigation('/profile')}>
                     👤 Profile
                   </button>
-                  <button className="dropdown-item" onClick={() => onNavigate('activity-groups')}>
+                  <button className="dropdown-item" onClick={() => handleNavigation('/activity-groups')}>
                     👥 Activity Groups
                   </button>
-                  <button className="dropdown-item" onClick={() => onNavigate('messages')}>
+                  <button className="dropdown-item" onClick={() => handleNavigation('/messages')}>
                     💬 Messages
                   </button>
-                  <button className="dropdown-item" onClick={() => onNavigate('friends')}>
+                  <button className="dropdown-item" onClick={() => handleNavigation('/friends')}>
                     🤝 Friends
                   </button>
-                  <button className="dropdown-item" onClick={() => onNavigate('mytrips')}>
+                  <button className="dropdown-item" onClick={() => handleNavigation('/mytrips')}>
                     🗺️ My Trips
                   </button>
                   <div className="dropdown-divider"></div>
-                  <button className="dropdown-item logout" onClick={onLogout}>
+                  <button className="dropdown-item logout" onClick={handleLogout}>
                     🚪 Logout
                   </button>
                 </div>
@@ -165,8 +180,8 @@ function Blog({ user, onNavigate, onLogout, darkMode, toggleDarkMode }) {
             </div>
           ) : (
             <div className="nav-buttons">
-              <button className="btn-secondary" onClick={() => onNavigate('login')}>Sign In</button>
-              <button className="btn-primary" onClick={() => onNavigate('register')}>Register</button>
+              <button className="btn-secondary" onClick={() => navigate('/login')}>Sign In</button>
+              <button className="btn-primary" onClick={() => navigate('/register')}>Register</button>
             </div>
           )}
         </div>

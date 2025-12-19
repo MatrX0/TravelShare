@@ -146,4 +146,9 @@ public class ActivityGroupService {
         dto.setAvatarUrl(user.getAvatarUrl());
         return dto;
     }
+
+    public List<GroupDTO> searchGroups(String query, String category, Long userId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'searchGroups'");
+    }
 }

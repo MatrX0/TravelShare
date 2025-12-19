@@ -2,6 +2,7 @@ import api from './api';
 
 export const authService = {
   async register(userData) {
+    // eslint-disable-next-line no-useless-catch
     try {
       const response = await api.post('/auth/register', userData);
       
@@ -17,6 +18,7 @@ export const authService = {
   },
 
   async login(credentials) {
+    // eslint-disable-next-line no-useless-catch
     try {
       const response = await api.post('/auth/login', credentials);
       

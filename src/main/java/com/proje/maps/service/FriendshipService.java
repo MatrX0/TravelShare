@@ -185,4 +185,14 @@ public class FriendshipService {
         dto.setStatus(friendship.getStatus().name());
         return dto;
     }
+
+    public void unblockUser(Long userId, Long blockedUserId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'unblockUser'");
+    }
+
+    public List<UserDTO> searchUsers(String query, Long userId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'searchUsers'");
+    }
 }

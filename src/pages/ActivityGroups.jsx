@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import './styles/ActivityGroups.css';
+import { useNavigate } from 'react-router-dom';
 
 function ActivityGroups({ user, onNavigate, darkMode }) {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [filteredGroups, setFilteredGroups] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -111,7 +113,7 @@ function ActivityGroups({ user, onNavigate, darkMode }) {
 
       {/* TravelShare Logo Header */}
       <div className="page-header">
-        <div className="logo" onClick={() => onNavigate('home')} style={{ cursor: 'pointer' }}>
+        <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
           <span className="logo-icon">✈️</span>
           <span className="logo-text">TravelShare</span>
         </div>
