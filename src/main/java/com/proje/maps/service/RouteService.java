@@ -10,11 +10,14 @@ import com.proje.maps.exception.BadRequestException;
 import com.proje.maps.exception.ResourceNotFoundException;
 import com.proje.maps.model.Route;
 import com.proje.maps.repo.RouteRepository;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.proje.maps.dto.RouteStatisticsResponse;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -174,4 +177,13 @@ public class RouteService {
                 .build();
     }
 
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RouteStatisticsResponse {
+        private int totalRoutes;
+        private double totalDistance;
+        private int totalDuration;
+    }
 }

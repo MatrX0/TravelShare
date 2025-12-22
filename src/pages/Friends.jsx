@@ -12,6 +12,8 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
   const [sentRequests, setSentRequests] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [uniqueIdSearch, setUniqueIdSearch] = useState('');
+  const [uniqueIdResult, setUniqueIdResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,6 +65,26 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
     }
   };
 
+  // YENİ: UniqueID ile arama
+  const handleUniqueIdSearch = async (e) => {
+    e.preventDefault();
+    if (!uniqueIdSearch.trim()) {
+      setUniqueIdResult(null);
+      return;
+    }
+
+    try {
+      const response = await api.get(`/friends/search/by-unique-id?uniqueId=${encodeURIComponent(uniqueIdSearch)}`);
+      if (response.success) {
+        setUniqueIdResult(response.data);
+      }
+    } catch (error) {
+      console.error('Error searching by unique ID:', error);
+      alert('User not found with Unique ID: ' + uniqueIdSearch);
+      setUniqueIdResult(null);
+    }
+  };
+
   const handleSendRequest = async (userId) => {
     try {
       const response = await api.post('/friends/request', { friendUserId: userId });
@@ -75,6 +97,28 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
         }
         // Remove from search results
         setSearchResults(searchResults.filter(user => user.id !== userId));
+        setUniqueIdResult(null);
+        setUniqueIdSearch('');
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      alert(error.message || 'Failed to send friend request');
+    }
+  };
+
+  // YENİ: UniqueID ile arkadaş ekle
+  const handleSendRequestByUniqueId = async (uniqueId) => {
+    try {
+      const response = await api.post(`/friends/request/by-unique-id?uniqueId=${encodeURIComponent(uniqueId)}`);
+      if (response.success) {
+        alert('Friend request sent!');
+        // Refresh sent requests
+        const sentRes = await api.get('/friends/requests/sent');
+        if (sentRes.success) {
+          setSentRequests(sentRes.data || []);
+        }
+        setUniqueIdResult(null);
+        setUniqueIdSearch('');
       }
     } catch (error) {
       console.error('Error sending friend request:', error);
@@ -196,6 +240,9 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
                   <button className="dropdown-item" onClick={() => handleNavigation('/mytrips')}>
                     🗺️ My Trips
                   </button>
+                  <button className="dropdown-item" onClick={() => handleNavigation('/map')}>
+                    🗺️ Maps
+                  </button>
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item logout" onClick={handleLogout}>
                     🚪 Logout
@@ -217,44 +264,87 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
 
         {/* Search Section */}
         <div className="search-section">
-          <form onSubmit={handleSearch} className="search-form">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search users by name or email..."
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
-              🔍 Search
-            </button>
-          </form>
-
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="search-results">
-              <h3>Search Results</h3>
-              <div className="results-grid">
-                {searchResults.map((result) => (
-                  <div key={result.id} className="result-card">
-                    <div className="result-avatar">
-                      {result.name ? result.name.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div className="result-info">
-                      <p className="result-name">{result.name}</p>
-                      <p className="result-email">{result.email}</p>
-                    </div>
-                    <button 
-                      className="add-friend-btn"
-                      onClick={() => handleSendRequest(result.id)}
-                    >
-                      Add Friend
-                    </button>
-                  </div>
-                ))}
+          {/* UniqueID Search - YENI */}
+          <div className="unique-id-search">
+            <form onSubmit={handleUniqueIdSearch} className="search-form unique-id-form">
+              <div className="search-input-wrapper">
+                <span className="search-icon">#</span>
+                <input
+                  type="text"
+                  value={uniqueIdSearch}
+                  onChange={(e) => setUniqueIdSearch(e.target.value)}
+                  placeholder="Search by Unique ID (e.g., username#1234)"
+                  className="search-input unique-id-input"
+                />
               </div>
-            </div>
-          )}
+              <button type="submit" className="search-btn unique-id-btn">
+                🔍 Find User
+              </button>
+            </form>
+
+            {/* UniqueID Result */}
+            {uniqueIdResult && (
+              <div className="unique-id-result">
+                <div className="result-card highlight">
+                  <div className="result-avatar">
+                    {uniqueIdResult.name ? uniqueIdResult.name.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div className="result-info">
+                    <p className="result-name">{uniqueIdResult.name}</p>
+                    <p className="result-unique-id">🆔 {uniqueIdResult.uniqueId}</p>
+                  </div>
+                  <button 
+                    className="add-friend-btn"
+                    onClick={() => handleSendRequestByUniqueId(uniqueIdResult.uniqueId)}
+                  >
+                    ➕ Add Friend
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Regular Search */}
+          <div className="name-search">
+            <form onSubmit={handleSearch} className="search-form">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search users by name or email..."
+                className="search-input"
+              />
+              <button type="submit" className="search-btn">
+                🔍 Search
+              </button>
+            </form>
+
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="search-results">
+                <h3>Search Results</h3>
+                <div className="results-grid">
+                  {searchResults.map((result) => (
+                    <div key={result.id} className="result-card">
+                      <div className="result-avatar">
+                        {result.name ? result.name.charAt(0).toUpperCase() : '?'}
+                      </div>
+                      <div className="result-info">
+                        <p className="result-name">{result.name}</p>
+                        <p className="result-unique-id">🆔 {result.uniqueId}</p>
+                      </div>
+                      <button 
+                        className="add-friend-btn"
+                        onClick={() => handleSendRequest(result.id)}
+                      >
+                        Add Friend
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -305,7 +395,7 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
                       </div>
                       <div className="friend-info">
                         <h4 className="friend-name">{friend.name}</h4>
-                        <p className="friend-email">{friend.email}</p>
+                        <p className="friend-unique-id">🆔 {friend.uniqueId}</p>
                       </div>
                       <div className="friend-actions">
                         <button 
@@ -344,7 +434,7 @@ function Friends({ user, onLogout, darkMode, toggleDarkMode }) {
                       </div>
                       <div className="request-info">
                         <h4 className="request-name">{request.name}</h4>
-                        <p className="request-email">{request.email}</p>
+                        <p className="request-unique-id">🆔 {request.uniqueId}</p>
                       </div>
                       <div className="request-actions">
                         <button 

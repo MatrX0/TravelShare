@@ -1,302 +1,401 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles/Maps.css';
-import api from '../services/api';
 
-const GOOGLE_API_KEY = "AIzaSyC_qsE40gVc0PeVGXt02SAE8m5Q6temmIk";
+const GOOGLE_API_KEY = "AIzaSyAxIKsElgx4hS_ISTRFaWwSQPGnGkHZo1I";
+const API_BASE_URL = 'http://localhost:8080/api';
 
-function Maps({ user, onLogout, darkMode, toggleDarkMode }) {
+function Maps({ user, darkMode, toggleDarkMode, onLogout }) {
   const navigate = useNavigate();
   const mapRef = useRef(null);
+  const markersRef = useRef([]); // useRef ile marker'ları tut!
   const [map, setMap] = useState(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  
-  // Route creation state
-  const [markers, setMarkers] = useState([]);
+  const [markerCount, setMarkerCount] = useState(0); // UI için sayaç
   const [directionsRenderer, setDirectionsRenderer] = useState(null);
-  const [routeInfo, setRouteInfo] = useState(null); // distance, duration
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [routeDescription, setRouteDescription] = useState('');
-  
-  // Saved routes state
-  const [savedRoutes, setSavedRoutes] = useState([]);
-  const [selectedRoute, setSelectedRoute] = useState(null);
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showRoutesPanel, setShowRoutesPanel] = useState(true);
-  
-  // Search
-  const [searchBox, setSearchBox] = useState(null);
-  const searchInputRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Load Google Maps
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initMap;
-      document.head.appendChild(script);
-    } else {
-      initMap();
-    }
-
-    // Fetch saved routes
-    fetchSavedRoutes();
+    loadGoogleMaps();
+    
+    return () => {
+      // Cleanup - marker'ları temizle
+      markersRef.current.forEach(marker => {
+        if (marker && marker.setMap) marker.setMap(null);
+      });
+      markersRef.current = [];
+      
+      if (directionsRenderer && directionsRenderer.setMap) {
+        directionsRenderer.setMap(null);
+      }
+    };
   }, []);
 
-  const initMap = () => {
-    const initialCenter = { lat: 39.9334, lng: 32.8597 }; // Ankara
-    const mapInstance = new window.google.maps.Map(mapRef.current, {
-      center: initialCenter,
-      zoom: 12,
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: true,
-      zoomControl: true,
-      styles: darkMode ? getDarkMapStyles() : [],
-    });
-
-    // Add click listener to add waypoints
-    mapInstance.addListener('click', (e) => {
-      addWaypoint(e.latLng);
-    });
-
-    setMap(mapInstance);
-
-    // Initialize search box
-    if (searchInputRef.current) {
-      const searchBoxInstance = new window.google.maps.places.SearchBox(searchInputRef.current);
-      setSearchBox(searchBoxInstance);
-
-      mapInstance.addListener('bounds_changed', () => {
-        searchBoxInstance.setBounds(mapInstance.getBounds());
-      });
-
-      searchBoxInstance.addListener('places_changed', () => {
-        const places = searchBoxInstance.getPlaces();
-        if (places.length === 0) return;
-
-        const place = places[0];
-        if (place.geometry?.location) {
-          mapInstance.setCenter(place.geometry.location);
-          mapInstance.setZoom(14);
-        }
-      });
-    }
-  };
-
-  const fetchSavedRoutes = async () => {
-    try {
-      const response = await api.get('/routes');
-      if (response.success && response.data) {
-        setSavedRoutes(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching routes:', error);
-    }
-  };
-
-  const addWaypoint = (location) => {
-    const marker = new window.google.maps.Marker({
-      position: location,
-      map: map,
-      label: (markers.length + 1).toString(),
-      draggable: true,
-      animation: window.google.maps.Animation.DROP,
-    });
-
-    // Add drag listener
-    marker.addListener('dragend', () => {
-      const newMarkers = markers.map(m => m === marker ? marker : m);
-      setMarkers(newMarkers);
-      calculateAndDisplayRoute(newMarkers);
-    });
-
-    const newMarkers = [...markers, marker];
-    setMarkers(newMarkers);
-
-    if (newMarkers.length >= 2) {
-      calculateAndDisplayRoute(newMarkers);
-    }
-  };
-
-  const calculateAndDisplayRoute = (markersList) => {
-    if (markersList.length < 2) return;
-
-    // Clear previous route
-    if (directionsRenderer) {
-      directionsRenderer.setMap(null);
-    }
-
-    const directionsService = new window.google.maps.DirectionsService();
-    const renderer = new window.google.maps.DirectionsRenderer({
-      map: map,
-      suppressMarkers: true, // We're using custom markers
-      polylineOptions: {
-        strokeColor: '#667eea',
-        strokeWeight: 5,
-      },
-    });
-
-    setDirectionsRenderer(renderer);
-
-    const origin = markersList[0].getPosition();
-    const destination = markersList[markersList.length - 1].getPosition();
-    const waypoints = markersList.slice(1, -1).map(marker => ({
-      location: marker.getPosition(),
-      stopover: true,
-    }));
-
-    directionsService.route(
-      {
-        origin: origin,
-        destination: destination,
-        waypoints: waypoints,
-        travelMode: window.google.maps.TravelMode.DRIVING,
-        optimizeWaypoints: true,
-      },
-      (response, status) => {
-        if (status === 'OK') {
-          renderer.setDirections(response);
-          
-          // Calculate total distance and duration
-          const route = response.routes[0];
-          let totalDistance = 0;
-          let totalDuration = 0;
-
-          route.legs.forEach(leg => {
-            totalDistance += leg.distance.value; // meters
-            totalDuration += leg.duration.value; // seconds
-          });
-
-          setRouteInfo({
-            distance: (totalDistance / 1000).toFixed(2), // km
-            duration: Math.round(totalDuration / 60), // minutes
-          });
-        } else {
-          alert('Could not calculate route: ' + status);
-        }
-      }
-    );
-  };
-
-  const clearRoute = () => {
-    // Clear markers
-    markers.forEach(marker => marker.setMap(null));
-    setMarkers([]);
-
-    // Clear route
-    if (directionsRenderer) {
-      directionsRenderer.setMap(null);
-      setDirectionsRenderer(null);
-    }
-
-    setRouteInfo(null);
-    setRouteName('');
-    setRouteDescription('');
-    setSelectedRoute(null);
-  };
-
-  const openSaveModal = () => {
-    if (markers.length < 2) {
-      alert('Please add at least 2 waypoints to create a route');
+  const loadGoogleMaps = () => {
+    if (window.google && window.google.maps && window.google.maps.Map) {
+      console.log('Google Maps already loaded');
+      initMap();
       return;
     }
-    setShowSaveModal(true);
+
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      console.log('Removing existing script...');
+      existingScript.remove();
+    }
+
+    window.initGoogleMapsCallback = () => {
+      console.log('Google Maps callback triggered');
+      if (window.google && window.google.maps) {
+        initMap();
+      }
+    };
+
+    console.log('Loading Google Maps...');
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&callback=initGoogleMapsCallback`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => {
+      console.error('Failed to load Google Maps');
+      setIsLoading(false);
+      alert('Harita yüklenemedi. Lütfen sayfayı yenileyin.');
+    };
+    document.head.appendChild(script);
+  };
+
+  const initMap = () => {
+    console.log('Initializing map...');
+    
+    if (!window.google?.maps?.Map) {
+      console.error('Google Maps not available');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const ankara = { lat: 39.9334, lng: 32.8597 };
+      
+      const mapInstance = new window.google.maps.Map(mapRef.current, {
+        center: ankara,
+        zoom: 12,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+      });
+
+      mapInstance.addListener('click', (e) => {
+        addMarker(e.latLng, mapInstance);
+      });
+
+      setMap(mapInstance);
+      setIsLoading(false);
+      console.log('Map initialized successfully');
+    } catch (error) {
+      console.error('Error creating map:', error);
+      setIsLoading(false);
+      alert('Harita oluşturulamadı: ' + error.message);
+    }
+  };
+
+  const addMarker = (location, mapInstance) => {
+    if (!window.google?.maps) {
+      console.error('Google Maps not available');
+      return;
+    }
+
+    if (markersRef.current.length >= 10) {
+      alert('Maksimum 10 nokta ekleyebilirsiniz!');
+      return;
+    }
+
+    try {
+      const markerNumber = markersRef.current.length + 1;
+      console.log(`Adding marker ${markerNumber}`);
+
+      const marker = new window.google.maps.Marker({
+        position: location,
+        map: mapInstance,
+        label: {
+          text: markerNumber.toString(),
+          color: 'white',
+          fontWeight: 'bold'
+        },
+        animation: window.google.maps.Animation.DROP,
+      });
+
+      markersRef.current.push(marker);
+      setMarkerCount(markersRef.current.length);
+      console.log(`Total markers: ${markersRef.current.length}`);
+    } catch (error) {
+      console.error('Error adding marker:', error);
+    }
+  };
+
+  const createRoute = () => {
+    if (markersRef.current.length < 2) {
+      alert('Rota oluşturmak için en az 2 nokta eklemelisiniz!');
+      return;
+    }
+
+    if (!window.google?.maps) {
+      console.error('Google Maps not available');
+      return;
+    }
+
+    try {
+      if (directionsRenderer) {
+        directionsRenderer.setMap(null);
+      }
+
+      const directionsService = new window.google.maps.DirectionsService();
+      const renderer = new window.google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: '#4285F4',
+          strokeWeight: 6,
+        },
+      });
+
+      setDirectionsRenderer(renderer);
+
+      const markers = markersRef.current;
+      const origin = markers[0].getPosition();
+      const destination = markers[markers.length - 1].getPosition();
+      const waypoints = markers.slice(1, -1).map(marker => ({
+        location: marker.getPosition(),
+        stopover: true,
+      }));
+
+      console.log('Creating route with', markers.length, 'markers...');
+
+      directionsService.route(
+        {
+          origin: origin,
+          destination: destination,
+          waypoints: waypoints,
+          travelMode: window.google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: true,
+        },
+        (response, status) => {
+          if (status === 'OK') {
+            renderer.setDirections(response);
+            
+            const route = response.routes[0];
+            let totalDistance = 0;
+            let totalDuration = 0;
+
+            route.legs.forEach(leg => {
+              totalDistance += leg.distance.value;
+              totalDuration += leg.duration.value;
+            });
+
+            setRouteInfo({
+              distance: (totalDistance / 1000).toFixed(1),
+              duration: Math.round(totalDuration / 60),
+            });
+
+            console.log('Route created:', {
+              distance: (totalDistance / 1000).toFixed(1) + ' km',
+              duration: Math.round(totalDuration / 60) + ' dakika'
+            });
+          } else {
+            console.error('Directions request failed:', status);
+            let errorMsg = 'Rota oluşturulamadı!';
+            
+            if (status === 'ZERO_RESULTS') {
+              errorMsg = 'Bu noktalar arasında rota bulunamadı.';
+            } else if (status === 'OVER_QUERY_LIMIT') {
+              errorMsg = 'API limiti aşıldı.';
+            } else if (status === 'REQUEST_DENIED') {
+              errorMsg = 'API isteği reddedildi. API ayarlarını kontrol edin.';
+            }
+            
+            alert(errorMsg);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error creating route:', error);
+      alert('Rota oluşturulamadı: ' + error.message);
+    }
   };
 
   const saveRoute = async () => {
-    if (!routeName.trim()) {
-      alert('Please enter a route name');
+    if (!routeInfo) {
+      alert('Önce rota oluşturmalısınız!');
       return;
     }
 
+    if (!routeName.trim()) {
+      alert('Lütfen rota için bir isim girin!');
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
-      // Prepare waypoints data
-      const waypoints = markers.map(marker => {
+      const waypoints = markersRef.current.map(marker => {
         const pos = marker.getPosition();
         return {
           lat: pos.lat(),
-          lng: pos.lng(),
+          lng: pos.lng()
         };
       });
 
       const routeData = {
         name: routeName.trim(),
-        description: routeDescription.trim(),
+        description: routeDescription.trim() || null,
         waypoints: waypoints,
-        distance: routeInfo?.distance || 0,
-        duration: routeInfo?.duration || 0,
+        distance: parseFloat(routeInfo.distance),
+        duration: parseInt(routeInfo.duration)
       };
 
-      const response = await api.post('/routes', routeData);
+      console.log('Saving route:', routeData);
+      console.log('Waypoints count:', waypoints.length);
 
-      if (response.success) {
-        alert('Route saved successfully! ✅');
-        setShowSaveModal(false);
-        setRouteName('');
-        setRouteDescription('');
+      // Token'ı al - farklı key'leri dene
+      let token = localStorage.getItem('auth_token'); // En yaygın
+      if (!token) token = localStorage.getItem('token');
+      if (!token) token = localStorage.getItem('authToken');
+      if (!token) token = localStorage.getItem('jwtToken');
+      if (!token) token = localStorage.getItem('accessToken');
+      
+      console.log('Token found:', token ? 'Yes' : 'No');
+      console.log('Token length:', token ? token.length : 0);
+      
+      if (!token) {
+        alert('Oturum bilgisi bulunamadı! Lütfen tekrar giriş yapın.');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/routes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(routeData)
+      });
+
+      console.log('Response status:', response.status);
+      
+      // Response'u text olarak al (JSON parse hatası olmasın diye)
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      if (response.ok) {
+        try {
+          const result = JSON.parse(responseText);
+          console.log('Route saved successfully:', result);
+          alert('Rota başarıyla kaydedildi! ✅');
+          
+          setShowSaveModal(false);
+          setRouteName('');
+          setRouteDescription('');
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          console.log('Raw response:', responseText);
+          alert('Rota kaydedildi ama response hatası! Kontrol edin.');
+        }
+      } else {
+        // Hata mesajını göster
+        console.error('Save failed. Status:', response.status);
+        console.error('Response:', responseText);
         
-        // Refresh saved routes
-        await fetchSavedRoutes();
+        let errorMessage = 'Rota kaydedilemedi!';
+        
+        if (response.status === 401) {
+          errorMessage = 'Oturum süresi dolmuş! Lütfen tekrar giriş yapın.';
+          setTimeout(() => navigate('/login'), 2000);
+        } else {
+          try {
+            const error = JSON.parse(responseText);
+            errorMessage = error.message || error.error || errorMessage;
+          } catch {
+            errorMessage = `Sunucu hatası (${response.status}): ${responseText}`;
+          }
+        }
+        
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('Error saving route:', error);
-      alert('Failed to save route. Please try again.');
+      alert('Rota kaydedilirken hata oluştu: ' + error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const loadRoute = (route) => {
-    // Clear current route
-    clearRoute();
-
-    // Load waypoints
-    const newMarkers = route.waypoints.map((waypoint, index) => {
-      const marker = new window.google.maps.Marker({
-        position: { lat: waypoint.lat, lng: waypoint.lng },
-        map: map,
-        label: (index + 1).toString(),
-        draggable: false,
-        animation: window.google.maps.Animation.DROP,
+  const clearRoute = () => {
+    try {
+      console.log(`Clearing ${markersRef.current.length} markers...`);
+      
+      // Tüm marker'ları haritadan kaldır
+      markersRef.current.forEach((marker, index) => {
+        if (marker && marker.setMap) {
+          console.log(`Removing marker ${index + 1}`);
+          marker.setMap(null);
+        }
       });
-      return marker;
-    });
+      
+      // Array'i temizle
+      markersRef.current = [];
+      setMarkerCount(0);
+      console.log('All markers removed from map');
 
-    setMarkers(newMarkers);
-    setSelectedRoute(route);
+      // Rota çizgisini kaldır
+      if (directionsRenderer) {
+        console.log('Removing directions renderer');
+        directionsRenderer.setMap(null);
+        setDirectionsRenderer(null);
+      }
 
-    // Calculate and display route
-    if (newMarkers.length >= 2) {
-      calculateAndDisplayRoute(newMarkers);
-
-      // Center map on route
-      const bounds = new window.google.maps.LatLngBounds();
-      newMarkers.forEach(marker => bounds.extend(marker.getPosition()));
-      map.fitBounds(bounds);
+      setRouteInfo(null);
+      console.log('Route cleared successfully');
+    } catch (error) {
+      console.error('Error clearing route:', error);
     }
   };
 
-  const deleteRoute = async (routeId) => {
-    if (!confirm('Are you sure you want to delete this route?')) return;
+  const removeLastPoint = () => {
+    if (markersRef.current.length === 0) {
+      console.log('No markers to remove');
+      return;
+    }
 
     try {
-      const response = await api.delete(`/routes/${routeId}`);
+      console.log(`Removing last marker. Current count: ${markersRef.current.length}`);
       
-      if (response.success) {
-        alert('Route deleted successfully');
-        
-        // Clear if deleted route is currently loaded
-        if (selectedRoute?.id === routeId) {
-          clearRoute();
-        }
-        
-        // Refresh saved routes
-        await fetchSavedRoutes();
+      // Son marker'ı al ve haritadan kaldır
+      const lastMarker = markersRef.current[markersRef.current.length - 1];
+      if (lastMarker && lastMarker.setMap) {
+        console.log('Removing marker from map');
+        lastMarker.setMap(null);
       }
+
+      // Array'den son marker'ı çıkar
+      markersRef.current.pop();
+      setMarkerCount(markersRef.current.length);
+      console.log(`Markers remaining: ${markersRef.current.length}`);
+      
+      // Rota varsa temizle
+      if (directionsRenderer) {
+        console.log('Clearing route (need to recreate)');
+        directionsRenderer.setMap(null);
+        setDirectionsRenderer(null);
+      }
+      setRouteInfo(null);
+      
     } catch (error) {
-      console.error('Error deleting route:', error);
-      alert('Failed to delete route');
+      console.error('Error removing last point:', error);
     }
   };
 
@@ -311,34 +410,12 @@ function Maps({ user, onLogout, darkMode, toggleDarkMode }) {
     navigate('/');
   };
 
-  const getDarkMapStyles = () => [
-    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-    {
-      featureType: 'water',
-      elementType: 'geometry',
-      stylers: [{ color: '#17263c' }]
-    },
-  ];
-
   return (
     <div className={`maps-page ${darkMode ? 'dark-mode' : ''}`}>
-      {/* Header */}
       <div className="maps-header">
         <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
           <span className="logo-icon">✈️</span>
           <span className="logo-text">TravelShare</span>
-        </div>
-
-        {/* Search Box */}
-        <div className="search-container">
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search location..."
-            className="location-search"
-          />
         </div>
 
         <div className="header-right">
@@ -385,170 +462,144 @@ function Maps({ user, onLogout, darkMode, toggleDarkMode }) {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="maps-content">
-        {/* Sidebar - Saved Routes */}
-        {showRoutesPanel && (
-          <div className="routes-sidebar">
-            <div className="sidebar-header">
-              <h2>📍 My Routes</h2>
-              <button 
-                className="close-sidebar-btn"
-                onClick={() => setShowRoutesPanel(false)}
-              >
-                ✕
-              </button>
-            </div>
+      <div className="map-wrapper">
+        {isLoading && (
+          <div className="loading-overlay">
+            <div className="loading-spinner"></div>
+            <p>Harita yükleniyor...</p>
+          </div>
+        )}
+        
+        <div ref={mapRef} className="google-map"></div>
 
-            <div className="routes-list">
-              {savedRoutes.length === 0 ? (
-                <div className="empty-routes">
-                  <div className="empty-icon">🗺️</div>
-                  <p>No saved routes yet</p>
-                  <small>Create a route by clicking on the map</small>
-                </div>
-              ) : (
-                savedRoutes.map(route => (
-                  <div 
-                    key={route.id} 
-                    className={`route-card ${selectedRoute?.id === route.id ? 'active' : ''}`}
-                  >
-                    <div className="route-card-header" onClick={() => loadRoute(route)}>
-                      <h3>{route.name}</h3>
-                      <button 
-                        className="delete-route-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteRoute(route.id);
-                        }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                    <p className="route-description">{route.description}</p>
-                    <div className="route-stats">
-                      <span>📏 {route.distance} km</span>
-                      <span>⏱️ {route.duration} min</span>
-                      <span>📍 {route.waypoints.length} points</span>
-                    </div>
-                    <small className="route-date">
-                      {new Date(route.createdAt).toLocaleDateString()}
-                    </small>
-                  </div>
-                ))
-              )}
+        {!isLoading && markerCount === 0 && (
+          <div className="info-panel instructions">
+            <h3>🗺️ Rota Nasıl Oluşturulur?</h3>
+            <ol>
+              <li>Haritaya tıklayarak noktalar ekle (min 2)</li>
+              <li>"Rota Oluştur" butonuna tıkla</li>
+              <li>Mesafe ve süreyi gör</li>
+              <li>"Rota Kaydet" ile kaydet</li>
+            </ol>
+          </div>
+        )}
+
+        {routeInfo && (
+          <div className="info-panel route-info">
+            <h3>🚗 Rota Bilgileri</h3>
+            <div className="info-row">
+              <span className="info-label">📏 Mesafe:</span>
+              <span className="info-value">{routeInfo.distance} km</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">⏱️ Süre:</span>
+              <span className="info-value">{routeInfo.duration} dakika</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">📍 Nokta Sayısı:</span>
+              <span className="info-value">{markerCount}</span>
             </div>
           </div>
         )}
 
-        {/* Map Container */}
-        <div className="map-container">
-          <div ref={mapRef} className="map"></div>
-
-          {/* Toggle Sidebar Button */}
-          {!showRoutesPanel && (
-            <button 
-              className="show-sidebar-btn"
-              onClick={() => setShowRoutesPanel(true)}
-            >
-              📍 Show Routes
+        <div className="map-controls">
+          {/* Rota Oluştur - 2+ marker ve rota yok */}
+          {markerCount >= 2 && !routeInfo && (
+            <button className="control-btn create-route-btn" onClick={createRoute}>
+              🗺️ Rota Oluştur ({markerCount} nokta)
             </button>
           )}
-
-          {/* Route Info Panel */}
+          
+          {/* Rota Kaydet - rota oluşturuldu */}
           {routeInfo && (
-            <div className="route-info-panel">
-              <h3>📊 Route Information</h3>
-              <div className="info-grid">
-                <div className="info-item">
-                  <span className="info-label">Distance:</span>
-                  <span className="info-value">{routeInfo.distance} km</span>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">Duration:</span>
-                  <span className="info-value">{routeInfo.duration} min</span>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">Waypoints:</span>
-                  <span className="info-value">{markers.length}</span>
-                </div>
-              </div>
-            </div>
+            <button className="control-btn save-route-btn" onClick={() => setShowSaveModal(true)}>
+              💾 Rota Kaydet
+            </button>
           )}
-
-          {/* Control Buttons */}
-          <div className="map-controls">
-            <button className="control-btn clear-btn" onClick={clearRoute}>
-              🗑️ Clear
-            </button>
-            <button 
-              className="control-btn save-btn" 
-              onClick={openSaveModal}
-              disabled={markers.length < 2}
-            >
-              💾 Save Route
-            </button>
-          </div>
-
-          {/* Instructions */}
-          {markers.length === 0 && (
-            <div className="instructions-panel">
-              <h3>🗺️ How to Create a Route</h3>
-              <ol>
-                <li>Click on the map to add waypoints</li>
-                <li>Add at least 2 points to create a route</li>
-                <li>Drag markers to adjust positions</li>
-                <li>Click "Save Route" when done</li>
-              </ol>
-            </div>
+          
+          {/* Geri Al ve Temizle - marker varsa */}
+          {markerCount > 0 && (
+            <>
+              <button className="control-btn undo-btn" onClick={removeLastPoint}>
+                ↶ Geri Al
+              </button>
+              <button className="control-btn clear-btn" onClick={clearRoute}>
+                🗑️ Temizle
+              </button>
+            </>
           )}
         </div>
+
+        {/* Debug Info - Geliştirme için */}
+        {!isLoading && (
+          <div style={{
+            position: 'absolute',
+            bottom: '10px',
+            left: '10px',
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '5px',
+            fontSize: '12px',
+            zIndex: 100
+          }}>
+            Marker Sayısı: {markerCount} | Rota: {routeInfo ? 'Var' : 'Yok'}
+          </div>
+        )}
       </div>
 
-      {/* Save Route Modal */}
+      {/* Save Modal */}
       {showSaveModal && (
         <div className="modal-overlay" onClick={() => setShowSaveModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>💾 Save Route</h2>
-              <button className="modal-close" onClick={() => setShowSaveModal(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+            <h2>Rotayı Kaydet</h2>
+            
+            <div className="modal-form">
               <div className="form-group">
-                <label>Route Name *</label>
+                <label>Rota Adı *</label>
                 <input
                   type="text"
                   value={routeName}
                   onChange={(e) => setRouteName(e.target.value)}
-                  placeholder="e.g., Weekend Road Trip"
-                  className="modal-input"
+                  placeholder="Örn: Ankara - İstanbul"
+                  maxLength="200"
+                  disabled={isSaving}
                 />
               </div>
+
               <div className="form-group">
-                <label>Description</label>
+                <label>Açıklama</label>
                 <textarea
                   value={routeDescription}
                   onChange={(e) => setRouteDescription(e.target.value)}
-                  placeholder="Add notes about this route..."
-                  className="modal-textarea"
+                  placeholder="Rota hakkında notlar..."
                   rows="3"
+                  maxLength="1000"
+                  disabled={isSaving}
                 />
               </div>
+
               <div className="route-summary">
-                <h4>Route Summary:</h4>
-                <p>📏 Distance: {routeInfo?.distance} km</p>
-                <p>⏱️ Duration: {routeInfo?.duration} min</p>
-                <p>📍 Waypoints: {markers.length}</p>
+                <p><strong>📏 Mesafe:</strong> {routeInfo.distance} km</p>
+                <p><strong>⏱️ Süre:</strong> {routeInfo.duration} dakika</p>
+                <p><strong>📍 Nokta:</strong> {markerCount}</p>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setShowSaveModal(false)}>
-                Cancel
+
+            <div className="modal-actions">
+              <button 
+                className="btn-cancel" 
+                onClick={() => setShowSaveModal(false)}
+                disabled={isSaving}
+              >
+                İptal
               </button>
-              <button className="btn-save" onClick={saveRoute}>
-                Save Route
+              <button 
+                className="btn-save" 
+                onClick={saveRoute}
+                disabled={isSaving || !routeName.trim()}
+              >
+                {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
             </div>
           </div>

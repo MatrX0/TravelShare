@@ -1,5 +1,6 @@
 package com.proje.maps.service;
 
+import com.proje.maps.api.CustomUserDetails;
 import com.proje.maps.dto.*;
 import com.proje.maps.repo.UserJpaRepository;
 import com.proje.maps.security.JwtUtil;
@@ -46,11 +47,13 @@ public class AuthService {
         
         User savedUser = userRepository.save(user);
         
-        UserDetails userDetails = org.springframework.security.core.userdetails.User
-                .withUsername(savedUser.getEmail())
-                .password(savedUser.getPassword())
-                .authorities("USER")
-                .build();
+        // CustomUserDetails kullan (User ID ile)
+        UserDetails userDetails = new CustomUserDetails(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getPassword(),
+                savedUser.getIsActive()
+        );
         
         String token = jwtUtil.generateToken(userDetails);
         
@@ -63,8 +66,18 @@ public class AuthService {
         );
         
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // userDetails artık CustomUserDetails (ID ile)
+        User user;
+        if (userDetails instanceof CustomUserDetails) {
+            CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+            user = userRepository.findById(customUserDetails.getId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        } else {
+            // Fallback - email ile ara
+            user = userRepository.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        }
         
         String token = jwtUtil.generateToken(userDetails);
         

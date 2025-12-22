@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Entity
 @Table(name = "users")
@@ -29,6 +30,9 @@ public class User {
     @JsonIgnore
     @Column(nullable = false, length = 255)
     private String password;
+    
+    @Column(name = "unique_id", nullable = false, unique = true, length = 20)
+    private String uniqueId;
     
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
@@ -80,6 +84,16 @@ public class User {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (uniqueId == null || uniqueId.isEmpty()) {
+            uniqueId = generateUniqueId();
+        }
+    }
+    
+    // Generate Discord-style unique ID (name#1234)
+    private String generateUniqueId() {
+        Random random = new Random();
+        int randomNum = random.nextInt(10000); // 0-9999
+        return String.format("%s#%04d", name.toLowerCase().replaceAll("\\s+", ""), randomNum);
     }
     
     // Constructors
@@ -109,6 +123,10 @@ public class User {
     
     public String getPassword() {
         return password;
+    }
+    
+    public String getUniqueId() {
+        return uniqueId;
     }
     
     public String getAvatarUrl() {
@@ -173,6 +191,10 @@ public class User {
         this.password = password;
     }
     
+    public void setUniqueId(String uniqueId) {
+        this.uniqueId = uniqueId;
+    }
+    
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
     }
@@ -223,6 +245,7 @@ public class User {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
+                ", uniqueId='" + uniqueId + '\'' +
                 ", createdAt=" + createdAt +
                 ", isActive=" + isActive +
                 '}';

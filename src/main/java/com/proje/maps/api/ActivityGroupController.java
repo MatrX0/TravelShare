@@ -117,4 +117,9 @@ public class ActivityGroupController extends BaseController {
             throw new BadRequestException("Failed to search groups: " + e.getMessage());
         }
     }
+
+    private boolean isAuthenticated() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isAuthenticated'");
+    }
 }

@@ -1,14 +1,10 @@
 package com.proje.maps.api;
 
-import com.proje.maps.dto.RouteStatisticsResponse;
 import com.proje.maps.dto.ApiResponse;
 import com.proje.maps.dto.RouteRequest;
 import com.proje.maps.dto.RouteResponse;
 import com.proje.maps.service.RouteService;
 import jakarta.validation.Valid;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,8 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Builder
-@Data
 @RestController
 @RequestMapping("/api/routes")
 @RequiredArgsConstructor
@@ -106,11 +100,11 @@ public class RouteController extends BaseController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ApiResponse<RouteStatisticsResponse>> getStatistics() {
+    public ResponseEntity<ApiResponse<RouteService.RouteStatisticsResponse>> getStatistics() {
         log.info("Fetching route statistics");
 
         Long userId = getCurrentUserId();
-        RouteStatisticsResponse stats = routeService.getRouteStatistics(userId);
+        RouteService.RouteStatisticsResponse stats = routeService.getRouteStatistics(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Statistics retrieved successfully", stats)

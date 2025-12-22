@@ -1,5 +1,6 @@
 package com.proje.maps.security;
 
+import com.proje.maps.api.CustomUserDetails;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,13 +55,28 @@ public class JwtUtil {
     
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername());
+        
+        // User ID'yi subject olarak kullan
+        String subject;
+        if (userDetails instanceof CustomUserDetails) {
+            CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+            subject = String.valueOf(customUserDetails.getId());
+            
+            // Ekstra claims ekle (opsiyonel)
+            claims.put("email", customUserDetails.getEmail());
+            claims.put("userId", customUserDetails.getId());
+        } else {
+            // Fallback - username kullan
+            subject = userDetails.getUsername();
+        }
+        
+        return createToken(claims, subject);
     }
     
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
                 .claims(claims)
-                .subject(subject)
+                .subject(subject)  // User ID (string olarak)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())

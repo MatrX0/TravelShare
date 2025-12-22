@@ -2,65 +2,51 @@ package com.proje.maps.api;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 
-/**
- * Base controller providing common functionality for all controllers
- */
 public abstract class BaseController {
-    
-    /**
-     * Get current authenticated user's ID from security context
-     * 
-     * @return User ID of currently authenticated user
-     * @throws RuntimeException if user is not authenticated or invalid
-     */
+
     protected Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new RuntimeException("User not authenticated");
         }
-        
+
         Object principal = authentication.getPrincipal();
         
+        // CustomUserDetails ise direkt ID'yi al
         if (principal instanceof CustomUserDetails) {
             return ((CustomUserDetails) principal).getId();
         }
         
-        throw new RuntimeException("Invalid user principal");
-    }
-    
-    /**
-     * Get current authenticated user details
-     * 
-     * @return CustomUserDetails object
-     * @throws RuntimeException if user is not authenticated
-     */
-    protected CustomUserDetails getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("User not authenticated");
+        // UserDetails ise username'den (artık User ID) parse et
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            org.springframework.security.core.userdetails.UserDetails userDetails = 
+                (org.springframework.security.core.userdetails.UserDetails) principal;
+            
+            String username = userDetails.getUsername();
+            
+            try {
+                return Long.parseLong(username);
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Cannot parse user ID from username: " + username);
+            }
         }
         
-        Object principal = authentication.getPrincipal();
-        
-        if (principal instanceof CustomUserDetails) {
-            return (CustomUserDetails) principal;
+        // Principal direkt Long ise
+        if (principal instanceof Long) {
+            return (Long) principal;
         }
         
-        throw new RuntimeException("Invalid user principal");
-    }
-    
-    /**
-     * Check if user is authenticated
-     * 
-     * @return true if user is authenticated, false otherwise
-     */
-    protected boolean isAuthenticated() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated() 
-               && authentication.getPrincipal() instanceof CustomUserDetails;
+        // Principal String ise (user ID)
+        if (principal instanceof String) {
+            try {
+                return Long.parseLong((String) principal);
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Cannot parse user ID from string: " + principal);
+            }
+        }
+        
+        throw new RuntimeException("Cannot determine user ID from principal type: " + principal.getClass());
     }
 }

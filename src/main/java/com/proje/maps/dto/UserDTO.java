@@ -8,6 +8,7 @@ public class UserDTO {
     private String name;
     private String email;
     private String username;
+    private String uniqueId;  // YENİ: Discord-style unique ID
     private String avatarUrl;
     private String bio;
     private LocalDateTime createdAt;
@@ -17,11 +18,12 @@ public class UserDTO {
     public UserDTO() {
     }
     
-    public UserDTO(Long id, String name, String email, String username, String avatarUrl, String bio, LocalDateTime createdAt, Boolean isActive) {
+    public UserDTO(Long id, String name, String email, String username, String uniqueId, String avatarUrl, String bio, LocalDateTime createdAt, Boolean isActive) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.username = username;
+        this.uniqueId = uniqueId;
         this.avatarUrl = avatarUrl;
         this.bio = bio;
         this.createdAt = createdAt;
@@ -59,6 +61,14 @@ public class UserDTO {
     
     public void setUsername(String username) {
         this.username = username;
+    }
+    
+    public String getUniqueId() {
+        return uniqueId;
+    }
+    
+    public void setUniqueId(String uniqueId) {
+        this.uniqueId = uniqueId;
     }
     
     public String getAvatarUrl() {
@@ -100,6 +110,7 @@ public class UserDTO {
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", username='" + username + '\'' +
+                ", uniqueId='" + uniqueId + '\'' +
                 '}';
     }
 }

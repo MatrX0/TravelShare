@@ -8,16 +8,15 @@ public class UserProfileDTO {
     private Long id;
     private String name;
     private String email;
+    private String uniqueId;
     private String avatarUrl;
     private String bio;
     private LocalDateTime createdAt;
-    private Integer groupCount;
+    
+    // Stats
     private Integer friendCount;
-    private Integer blogCount;
+    private Integer groupCount;
     private List<GroupDTO> groups;
-    private List<FriendDTO> friends;
-    private List<GroupBlogDTO> recentBlogs;
-    private String friendshipStatus; // null, PENDING, ACCEPTED, BLOCKED (for viewing other profiles)
     
     // Constructors
     public UserProfileDTO() {
@@ -48,6 +47,14 @@ public class UserProfileDTO {
         this.email = email;
     }
     
+    public String getUniqueId() {
+        return uniqueId;
+    }
+    
+    public void setUniqueId(String uniqueId) {
+        this.uniqueId = uniqueId;
+    }
+    
     public String getAvatarUrl() {
         return avatarUrl;
     }
@@ -72,14 +79,6 @@ public class UserProfileDTO {
         this.createdAt = createdAt;
     }
     
-    public Integer getGroupCount() {
-        return groupCount;
-    }
-    
-    public void setGroupCount(Integer groupCount) {
-        this.groupCount = groupCount;
-    }
-    
     public Integer getFriendCount() {
         return friendCount;
     }
@@ -88,12 +87,12 @@ public class UserProfileDTO {
         this.friendCount = friendCount;
     }
     
-    public Integer getBlogCount() {
-        return blogCount;
+    public Integer getGroupCount() {
+        return groupCount;
     }
     
-    public void setBlogCount(Integer blogCount) {
-        this.blogCount = blogCount;
+    public void setGroupCount(Integer groupCount) {
+        this.groupCount = groupCount;
     }
     
     public List<GroupDTO> getGroups() {
@@ -102,39 +101,5 @@ public class UserProfileDTO {
     
     public void setGroups(List<GroupDTO> groups) {
         this.groups = groups;
-    }
-    
-    public List<FriendDTO> getFriends() {
-        return friends;
-    }
-    
-    public void setFriends(List<FriendDTO> friends) {
-        this.friends = friends;
-    }
-    
-    public List<GroupBlogDTO> getRecentBlogs() {
-        return recentBlogs;
-    }
-    
-    public void setRecentBlogs(List<GroupBlogDTO> recentBlogs) {
-        this.recentBlogs = recentBlogs;
-    }
-    
-    public String getFriendshipStatus() {
-        return friendshipStatus;
-    }
-    
-    public void setFriendshipStatus(String friendshipStatus) {
-        this.friendshipStatus = friendshipStatus;
-    }
-    
-    @Override
-    public String toString() {
-        return "UserProfileDTO{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", groupCount=" + groupCount +
-                ", friendCount=" + friendCount +
-                '}';
     }
 }

@@ -182,4 +182,31 @@ public class FriendshipController extends BaseController {
             throw new BadRequestException("Failed to search users: " + e.getMessage());
         }
     }
+
+    @PostMapping("/request/by-unique-id")
+    @Operation(summary = "Send friend request by Unique ID", description = "Send a friend request using user's unique ID (e.g., username#1234)")
+    public ResponseEntity<ApiResponse<FriendRequestDTO>> sendFriendRequestByUniqueId(
+            @RequestParam String uniqueId) {
+        try {
+            Long userId = getCurrentUserId();
+            FriendRequestDTO friendRequest = friendshipService.sendFriendRequestByUniqueId(userId, uniqueId);
+            return ResponseEntity.ok(ApiResponse.success("Friend request sent", friendRequest));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to send friend request: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/search/by-unique-id")
+    @Operation(summary = "Search user by Unique ID", description = "Find a user by their unique ID")
+    public ResponseEntity<ApiResponse<UserDTO>> searchByUniqueId(@RequestParam String uniqueId) {
+        try {
+            UserDTO user = friendshipService.findUserByUniqueId(uniqueId);
+            return ResponseEntity.ok(ApiResponse.success(user));
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("User not found with Unique ID: " + uniqueId);
+        }
+    }
+
 }

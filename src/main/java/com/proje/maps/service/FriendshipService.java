@@ -195,4 +195,37 @@ public class FriendshipService {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'searchUsers'");
     }
+
+    // Send friend request by Unique ID
+    @Transactional
+    public FriendRequestDTO sendFriendRequestByUniqueId(Long userId, String uniqueId) {
+        // Find friend by unique ID
+        User friend = userRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new RuntimeException("User not found with Unique ID: " + uniqueId));
+        
+        // Check if trying to add self
+        if (userId.equals(friend.getId())) {
+            throw new RuntimeException("Cannot send friend request to yourself");
+        }
+        
+        // Use existing sendFriendRequest method
+        return sendFriendRequest(userId, friend.getId());
+    }
+    
+    // Find user by Unique ID
+    public UserDTO findUserByUniqueId(String uniqueId) {
+        User user = userRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new RuntimeException("User not found with Unique ID: " + uniqueId));
+        
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setEmail(user.getEmail());
+        dto.setUniqueId(user.getUniqueId());
+        dto.setAvatarUrl(user.getAvatarUrl());
+        dto.setCreatedAt(user.getCreatedAt());
+        
+        return dto;
+    }
+
 }

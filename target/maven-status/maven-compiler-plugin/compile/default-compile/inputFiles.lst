@@ -74,6 +74,7 @@ C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main
 C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\exception\UnauthorizedException.java
 C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\api\CommentController.java
 C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\dto\UpdateProfileRequest.java
+C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\api\ProfileController.java
 C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\api\DirectMessageController.java
 C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\repo\DirectMessageRepository.java
 C:\Users\senol\OneDrive\Documents\TravelPlanningWeb\travel-planning-app\src\main\java\com\proje\maps\dto\GroupDTO.java
