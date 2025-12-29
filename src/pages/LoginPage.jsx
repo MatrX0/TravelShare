@@ -18,7 +18,7 @@ function LoginPage({ onLogin }) {
     try {
       const response = await authService.login({ email, password });
       onLogin(response.user);
-      navigate('/'); // Redirect to home after login
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
       console.error('Login error:', err);
@@ -54,8 +54,36 @@ function LoginPage({ onLogin }) {
               disabled={loading}
             />
           </div>
+          
+          {/* Password with Forgot Password - INLINE STYLE */}
           <div className="form-group">
-            <label>Password</label>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8px'
+            }}>
+              <label style={{ marginBottom: 0 }}>Password</label>
+              <Link 
+                to="/ForgotPassword"
+                style={{
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  color: '#667eea',
+                  textDecoration: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#764ba2';
+                  e.target.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#667eea';
+                  e.target.style.textDecoration = 'none';
+                }}
+              >
+                Forgot Password?
+              </Link>
+            </div>
             <input
               type="password"
               placeholder="Enter your password"
@@ -66,6 +94,7 @@ function LoginPage({ onLogin }) {
               disabled={loading}
             />
           </div>
+          
           <button 
             type="submit" 
             className="btn-auth"
@@ -75,6 +104,7 @@ function LoginPage({ onLogin }) {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+        
         <div className="auth-footer">
           <p>
             Don't have an account?{' '}

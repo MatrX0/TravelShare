@@ -4,6 +4,9 @@ import com.proje.maps.dto.*;
 import com.proje.maps.exception.BadRequestException;
 import com.proje.maps.exception.ResourceNotFoundException;
 import com.proje.maps.service.FriendshipService;
+import com.proje.maps.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,14 +15,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/friends")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://shareway.com.tr", "https://shareway.com.tr", "http://77.245.156.161", "https://77.245.156.161"})
 @Tag(name = "Friends", description = "Friendship management endpoints")
 public class FriendshipController extends BaseController {
     
     private final FriendshipService friendshipService;
+    private final NotificationService notificationService;
     
-    public FriendshipController(FriendshipService friendshipService) {
+    public FriendshipController(FriendshipService friendshipService, 
+                               NotificationService notificationService) {
         this.friendshipService = friendshipService;
+        this.notificationService = notificationService;
     }
     
     @GetMapping
@@ -73,6 +79,21 @@ public class FriendshipController extends BaseController {
             FriendRequestDTO friendRequest = friendshipService.sendFriendRequest(
                 userId, request.getFriendUserId()
             );
+            
+            // ✨ YENİ: Bildirim oluştur
+            try {
+                notificationService.createNotification(
+                    request.getFriendUserId(),  // Kime? → İstek alan kişi
+                    "FRIEND_REQUEST",           // Ne?
+                    "New Friend Request",       // Başlık
+                    friendRequest.getName() + " sent you a friend request",  // Mesaj
+                    friendRequest.getRequestId()  // İlgili ID
+                );
+            } catch (Exception e) {
+                // Bildirim hatasını logla ama devam et
+                System.err.println("Failed to create notification: " + e.getMessage());
+            }
+            
             return ResponseEntity.ok(ApiResponse.success("Friend request sent", friendRequest));
         } catch (IllegalStateException e) {
             throw new BadRequestException(e.getMessage());
@@ -87,6 +108,20 @@ public class FriendshipController extends BaseController {
         try {
             Long userId = getCurrentUserId();
             FriendDTO friend = friendshipService.acceptFriendRequest(requestId, userId);
+            
+            // ✨ YENİ: Bildirim oluştur (istek gönderen kişiye)
+            try {
+                notificationService.createNotification(
+                    friend.getUserId(),          // Kime? → İstek gönderen kişi (userId kullan)
+                    "FRIEND_ACCEPT",             // Ne?
+                    "Friend Request Accepted",   // Başlık
+                    friend.getName() + " accepted your friend request",  // Mesaj
+                    requestId                    // İlgili ID
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to create notification: " + e.getMessage());
+            }
+            
             return ResponseEntity.ok(ApiResponse.success("Friend request accepted", friend));
         } catch (IllegalStateException e) {
             throw new BadRequestException(e.getMessage());
@@ -182,31 +217,4 @@ public class FriendshipController extends BaseController {
             throw new BadRequestException("Failed to search users: " + e.getMessage());
         }
     }
-
-    @PostMapping("/request/by-unique-id")
-    @Operation(summary = "Send friend request by Unique ID", description = "Send a friend request using user's unique ID (e.g., username#1234)")
-    public ResponseEntity<ApiResponse<FriendRequestDTO>> sendFriendRequestByUniqueId(
-            @RequestParam String uniqueId) {
-        try {
-            Long userId = getCurrentUserId();
-            FriendRequestDTO friendRequest = friendshipService.sendFriendRequestByUniqueId(userId, uniqueId);
-            return ResponseEntity.ok(ApiResponse.success("Friend request sent", friendRequest));
-        } catch (IllegalStateException e) {
-            throw new BadRequestException(e.getMessage());
-        } catch (Exception e) {
-            throw new BadRequestException("Failed to send friend request: " + e.getMessage());
-        }
-    }
-    
-    @GetMapping("/search/by-unique-id")
-    @Operation(summary = "Search user by Unique ID", description = "Find a user by their unique ID")
-    public ResponseEntity<ApiResponse<UserDTO>> searchByUniqueId(@RequestParam String uniqueId) {
-        try {
-            UserDTO user = friendshipService.findUserByUniqueId(uniqueId);
-            return ResponseEntity.ok(ApiResponse.success(user));
-        } catch (Exception e) {
-            throw new ResourceNotFoundException("User not found with Unique ID: " + uniqueId);
-        }
-    }
-
 }

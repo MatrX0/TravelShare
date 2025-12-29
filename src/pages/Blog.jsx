@@ -8,60 +8,33 @@ function Blog({ user, onLogout, darkMode, toggleDarkMode }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [blogPosts, setBlogPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groups, setGroups] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [newBlog, setNewBlog] = useState({
     title: '',
     content: '',
-    imageUrl: ''
+    imageUrl: '',
+    category: 'DESTINATIONS'
   });
 
   const categories = [
     { id: 'ALL', name: 'All Posts', icon: '📝' },
     { id: 'DESTINATIONS', name: 'Destinations', icon: '🌍' },
     { id: 'TIPS', name: 'Travel Tips', icon: '💡' },
-    { id: 'STORIES', name: 'Travel Stories', icon: '📖' },
     { id: 'GUIDES', name: 'Guides', icon: '🗺️' },
   ];
 
   useEffect(() => {
-    fetchGroups();
+    fetchBlogs();
   }, []);
 
-  useEffect(() => {
-    if (groups.length > 0) {
-      fetchAllBlogs();
-    }
-  }, [groups]);
-
-  const fetchGroups = async () => {
-    try {
-      const response = await api.get('/groups');
-      if (response.success) {
-        setGroups(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching groups:', error);
-    }
-  };
-
-  const fetchAllBlogs = async () => {
+  const fetchBlogs = async () => {
     setLoading(true);
     try {
-      const allBlogs = [];
-      for (const group of groups) {
-        try {
-          const response = await api.get(`/groups/${group.id}/blogs`);
-          if (response.success && response.data) {
-            allBlogs.push(...response.data);
-          }
-        } catch (error) {
-          console.error(`Error fetching blogs for group ${group.id}:`, error);
-        }
+      const response = await api.get('/site-blogs');
+      if (response.success) {
+        setBlogPosts(response.data);
       }
-      setBlogPosts(allBlogs);
     } catch (error) {
       console.error('Error fetching blogs:', error);
     } finally {
@@ -69,44 +42,27 @@ function Blog({ user, onLogout, darkMode, toggleDarkMode }) {
     }
   };
 
-  const fetchGroupBlogs = async (groupId) => {
-    setLoading(true);
-    try {
-      const response = await api.get(`/groups/${groupId}/blogs`);
-      if (response.success) {
-        setBlogPosts(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching group blogs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateBlog = async (e) => {
     e.preventDefault();
-    if (!selectedGroup || !user) return;
+    if (!user) return;
 
     try {
-      const response = await api.post(`/groups/${selectedGroup.id}/blogs`, {
+      const response = await api.post('/site-blogs', {
         title: newBlog.title,
         content: newBlog.content,
-        imageUrl: newBlog.imageUrl
+        imageUrl: newBlog.imageUrl,
+        category: newBlog.category
       });
 
       if (response.success) {
         alert('Blog created successfully!');
-        setNewBlog({ title: '', content: '', imageUrl: '' });
+        setNewBlog({ title: '', content: '', imageUrl: '', category: 'DESTINATIONS' });
         setShowCreateForm(false);
-        if (selectedGroup) {
-          fetchGroupBlogs(selectedGroup.id);
-        } else {
-          fetchAllBlogs();
-        }
+        fetchBlogs();
       }
     } catch (error) {
       console.error('Error creating blog:', error);
-      alert('Failed to create blog. Please try again.');
+      alert('Failed to create blog: ' + (error.message || 'Please try again.'));
     }
   };
 
@@ -195,7 +151,7 @@ function Blog({ user, onLogout, darkMode, toggleDarkMode }) {
         </p>
 
         {/* Create Blog Button */}
-        {user && (
+        {user && user.role === 'ADMIN' && (
           <button
             className="create-blog-btn"
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -206,26 +162,20 @@ function Blog({ user, onLogout, darkMode, toggleDarkMode }) {
       </div>
 
       {/* Create Blog Form */}
-      {showCreateForm && user && (
+      {showCreateForm && user && user.role === 'ADMIN' && (
         <div className="create-blog-form">
           <h3>Create New Blog Post</h3>
           <form onSubmit={handleCreateBlog}>
             <div className="form-group">
-              <label>Select Group</label>
+              <label>Category</label>
               <select
-                value={selectedGroup?.id || ''}
-                onChange={(e) => {
-                  const group = groups.find(g => g.id === parseInt(e.target.value));
-                  setSelectedGroup(group);
-                }}
+                value={newBlog.category}
+                onChange={(e) => setNewBlog({...newBlog, category: e.target.value})}
                 required
               >
-                <option value="">Choose a group...</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>
-                    {group.icon} {group.name}
-                  </option>
-                ))}
+                <option value="DESTINATIONS">🌍 Destinations</option>
+                <option value="TIPS">💡 Travel Tips</option>
+                <option value="GUIDES">🗺️ Guides</option>
               </select>
             </div>
 
@@ -303,9 +253,9 @@ function Blog({ user, onLogout, darkMode, toggleDarkMode }) {
 
               {/* Post Content */}
               <div className="post-content">
-                {/* Group Badge */}
+                {/* Category Badge */}
                 <span className="post-category">
-                  {post.groupName}
+                  {categories.find(c => c.id === post.category)?.icon || '📝'} {categories.find(c => c.id === post.category)?.name || post.category}
                 </span>
 
                 {/* Title */}

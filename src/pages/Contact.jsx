@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import './styles/Contact.css';
 
 function Contact({ user, onLogout, darkMode, toggleDarkMode }) {
@@ -38,30 +39,39 @@ function Contact({ user, onLogout, darkMode, toggleDarkMode }) {
     setIsSubmitting(true);
     setFormStatus({ type: '', message: '' });
 
-    // Simulate API call
     try {
-      // Backend'e istek gönderilecek
-      // const response = await api.post('/contact', formData);
-      
-      // Simülasyon için timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setFormStatus({
-        type: 'success',
-        message: 'Thank you for your message! We\'ll get back to you soon.'
+      // Backend üzerinden email gönder
+      const response = await api.post('/auth/contact', {
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message
       });
       
-      // Form'u temizle
-      setFormData({
-        name: user?.name || '',
-        email: user?.email || '',
-        subject: '',
-        message: ''
-      });
+      if (response.success) {
+        setFormStatus({
+          type: 'success',
+          message: 'Thank you for your message! We\'ll get back to you soon.'
+        });
+        
+        // Form'u temizle
+        setFormData({
+          name: user?.name || '',
+          email: user?.email || '',
+          subject: '',
+          message: ''
+        });
+      } else {
+        setFormStatus({
+          type: 'error',
+          message: response.message || 'Failed to send message. Please try again.'
+        });
+      }
     } catch (error) {
+      console.error('Contact Form Error:', error);
       setFormStatus({
         type: 'error',
-        message: 'Failed to send message. Please try again.'
+        message: 'Failed to send message. Please try again later.'
       });
     } finally {
       setIsSubmitting(false);

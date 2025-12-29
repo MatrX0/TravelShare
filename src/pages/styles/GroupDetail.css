@@ -3,6 +3,12 @@
   margin: 0 auto;
   padding: 20px;
   font-family: system-ui, -apple-system, sans-serif;
+  background: white;
+  min-height: 100vh;
+}
+
+.group-detail-container.dark-mode {
+  background: #0f172a;
 }
 
 .group-detail-header {
@@ -307,4 +313,111 @@
   justify-content: center;
   align-items: center;
   min-height: 400px;
+}
+
+/* Dark Mode Styles */
+.group-detail-container.dark-mode .group-tabs {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.group-detail-container.dark-mode .tabs-nav {
+  border-bottom-color: #334155;
+}
+
+.group-detail-container.dark-mode .tab-button {
+  color: #94a3b8;
+}
+
+.group-detail-container.dark-mode .tab-button.active {
+  color: #8b5cf6;
+  border-bottom-color: #8b5cf6;
+}
+
+.group-detail-container.dark-mode .non-member-message {
+  background: #1e293b;
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+.group-detail-container.dark-mode .message-username,
+.group-detail-container.dark-mode .blog-title,
+.group-detail-container.dark-mode .member-name,
+.group-detail-container.dark-mode .blog-author {
+  color: #f1f5f9;
+}
+
+.group-detail-container.dark-mode .message-text,
+.group-detail-container.dark-mode .blog-content {
+  color: #cbd5e1;
+}
+
+.group-detail-container.dark-mode .message-time,
+.group-detail-container.dark-mode .blog-date,
+.group-detail-container.dark-mode .member-email,
+.group-detail-container.dark-mode .empty-chat,
+.group-detail-container.dark-mode .empty-blogs {
+  color: #64748b;
+}
+
+.group-detail-container.dark-mode .message-input {
+  background: #334155;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+.group-detail-container.dark-mode .message-input::placeholder {
+  color: #64748b;
+}
+
+.group-detail-container.dark-mode .blog-item {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.group-detail-container.dark-mode .send-message-btn {
+  background: #8b5cf6;
+}
+
+.group-detail-container.dark-mode .send-message-btn:hover {
+  background: #7c3aed;
+}
+
+.group-detail-container.dark-mode .join-btn {
+  background: white;
+  color: #667eea;
+}
+
+.group-detail-container.dark-mode .join-btn:hover {
+  background: #f8fafc;
+}
+
+.group-detail-container.dark-mode .leave-btn {
+  background: #ef4444;
+}
+
+.group-detail-container.dark-mode .leave-btn:hover {
+  background: #dc2626;
+}
+
+.group-detail-container.dark-mode .create-blog-form {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.group-detail-container.dark-mode .create-blog-form h3 {
+  color: #f1f5f9;
+}
+
+.group-detail-container.dark-mode .create-blog-form input,
+.group-detail-container.dark-mode .create-blog-form textarea {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+.group-detail-container.dark-mode .create-blog-form input::placeholder,
+.group-detail-container.dark-mode .create-blog-form textarea::placeholder {
+  color: #64748b;
 }

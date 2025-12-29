@@ -15,7 +15,8 @@ function LandingPage({
   backendGroups,
   loadingGroups,
   joinedGroups,
-  onJoinGroup
+  onJoinGroup,
+  onLeaveGroup
 }) {
   const navigate = useNavigate();
 
@@ -41,6 +42,7 @@ function LandingPage({
         loadingGroups={loadingGroups}
         joinedGroups={joinedGroups}
         onJoinGroup={onJoinGroup}
+        onLeaveGroup={onLeaveGroup}
         onOpenGroupDetail={openGroupDetail}
       />
       

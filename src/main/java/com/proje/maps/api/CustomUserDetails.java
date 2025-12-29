@@ -1,67 +1,64 @@
 package com.proje.maps.api;
 
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Collections;
 
+/**
+ * Wrapper for Spring's UserDetails that adds User ID
+ */
 public class CustomUserDetails implements UserDetails {
     
+    private final UserDetails delegate;
     private final Long id;
-    private final String email;
-    private final String password;
-    private final boolean isActive;
     
-    public CustomUserDetails(Long id, String email, String password, boolean isActive) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
-        this.isActive = isActive;
+    /**
+     * Constructor that wraps Spring's default UserDetails and adds ID
+     */
+    public CustomUserDetails(UserDetails userDetails, Long userId) {
+        this.delegate = userDetails;
+        this.id = userId;
     }
     
+    // Custom getter for User ID
     public Long getId() {
         return id;
     }
     
-    public String getEmail() {
-        return email;
-    }
-    
+    // Delegate all UserDetails methods to the wrapped object
     @Override
-    public String getUsername() {
-        // Username olarak User ID'yi string olarak döndür
-        return String.valueOf(id);
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return delegate.getAuthorities();
     }
     
     @Override
     public String getPassword() {
-        return password;
+        return delegate.getPassword();
     }
     
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("USER"));
+    public String getUsername() {
+        return delegate.getUsername();
     }
     
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return delegate.isAccountNonExpired();
     }
     
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return delegate.isAccountNonLocked();
     }
     
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return delegate.isCredentialsNonExpired();
     }
     
     @Override
     public boolean isEnabled() {
-        return isActive;
+        return delegate.isEnabled();
     }
 }

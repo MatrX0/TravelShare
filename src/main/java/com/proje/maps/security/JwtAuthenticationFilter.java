@@ -1,5 +1,8 @@
 package com.proje.maps.security;
 
+import com.proje.maps.api.CustomUserDetails;
+import com.proje.maps.repo.UserJpaRepository;
+import com.proje.maps.resource.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,44 +22,68 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final UserJpaRepository userRepository;
     
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, 
+                                   UserDetailsService userDetailsService,
+                                   UserJpaRepository userRepository) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
     
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/weather/") || 
+               path.startsWith("/api/auth/") || 
+               path.equals("/api/health") ||
+               path.startsWith("/ws/");
+    }
+    
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, 
+                                   HttpServletResponse response, 
+                                   FilterChain filterChain) throws ServletException, IOException {
         
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
+        String authHeader = request.getHeader("Authorization");
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
         
-        jwt = authHeader.substring(7);
-        userEmail = jwtUtil.extractUsername(jwt);
-        
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+        try {
+            String jwt = authHeader.substring(7);
+            String email = jwtUtil.extractUsername(jwt);
             
-            if (jwtUtil.validateToken(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // ✅ Mevcut UserDetailsService kullan
+                UserDetails baseUserDetails = userDetailsService.loadUserByUsername(email);
+                
+                if (jwtUtil.validateToken(jwt, baseUserDetails)) {
+                    // ✅ User ID'yi database'den al
+                    User user = userRepository.findByEmail(email)
+                            .orElseThrow(() -> new RuntimeException("User not found"));
+                    
+                    // ✅ CustomUserDetails ile wrap et (ID ekle)
+                    CustomUserDetails customUserDetails = new CustomUserDetails(baseUserDetails, user.getId());
+                    
+                    // ✅ CustomUserDetails'i SecurityContext'e koy
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            customUserDetails, 
+                            null, 
+                            customUserDetails.getAuthorities()
+                    );
+                    
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (Exception e) {
+            logger.error("Cannot set user authentication: {}", e);
         }
+        
         filterChain.doFilter(request, response);
     }
 }

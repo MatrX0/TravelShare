@@ -1,6 +1,7 @@
 package com.proje.maps.service;
 
 import com.proje.maps.dto.*;
+import com.proje.maps.dto.ConversationDTO.OtherUserInfo;
 import com.proje.maps.repo.*;
 import com.proje.maps.resource.*;
 import org.springframework.stereotype.Service;
@@ -39,11 +40,11 @@ public class DirectMessageService {
             throw new RuntimeException("You can only send messages to friends");
         }
         
-        // Create message
-        DirectMessage message = new DirectMessage(sender, receiver, request.getMessage());
+        // Create message (use getContent() now)
+        DirectMessage message = new DirectMessage(sender, receiver, request.getContent());
         DirectMessage savedMessage = messageRepository.save(message);
         
-        return toMessageDTO(savedMessage);
+        return toMessageDTO(savedMessage, senderId);
     }
     
     // Get conversation between two users
@@ -55,7 +56,7 @@ public class DirectMessageService {
         
         List<DirectMessage> messages = messageRepository.findConversationBetween(userId1, userId2);
         return messages.stream()
-                .map(this::toMessageDTO)
+                .map(msg -> toMessageDTO(msg, userId1))
                 .collect(Collectors.toList());
     }
     
@@ -77,14 +78,19 @@ public class DirectMessageService {
             Long unreadCount = messageRepository.countUnreadMessagesFrom(userId, partnerId);
             
             ConversationDTO dto = new ConversationDTO();
-            dto.setUserId(partner.getId());
-            dto.setName(partner.getName());
-            dto.setEmail(partner.getEmail());
-            dto.setAvatarUrl(partner.getAvatarUrl());
+            
+            // Create otherUser object
+            OtherUserInfo otherUser = new OtherUserInfo(
+                partner.getId(),
+                partner.getName(),
+                partner.getEmail(),
+                partner.getAvatarUrl()
+            );
+            dto.setOtherUser(otherUser);
+            
             dto.setLastMessage(lastMessage != null ? lastMessage.getMessage() : null);
             dto.setLastMessageTime(lastMessage != null ? lastMessage.getCreatedAt() : null);
             dto.setUnreadCount(unreadCount.intValue());
-            dto.setIsOnline(false); // TODO: Implement online status
             
             conversations.add(dto);
         }
@@ -103,7 +109,7 @@ public class DirectMessageService {
     public List<DirectMessageDTO> getUnreadMessages(Long userId) {
         List<DirectMessage> messages = messageRepository.findUnreadMessages(userId);
         return messages.stream()
-                .map(this::toMessageDTO)
+                .map(msg -> toMessageDTO(msg, userId))
                 .collect(Collectors.toList());
     }
     
@@ -139,9 +145,23 @@ public class DirectMessageService {
         messageRepository.deleteConversationBetween(userId1, userId2);
     }
     
+    // Delete message
+    @Transactional
+    public void deleteMessage(Long messageId, Long userId) {
+        DirectMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+        
+        // Check if user is the sender
+        if (!message.getSender().getId().equals(userId)) {
+            throw new RuntimeException("Only the sender can delete this message");
+        }
+        
+        messageRepository.delete(message);
+    }
+    
     // ==================== HELPER METHODS ====================
     
-    private DirectMessageDTO toMessageDTO(DirectMessage message) {
+    private DirectMessageDTO toMessageDTO(DirectMessage message, Long currentUserId) {
         DirectMessageDTO dto = new DirectMessageDTO();
         dto.setId(message.getId());
         dto.setSenderId(message.getSender().getId());
@@ -150,15 +170,14 @@ public class DirectMessageService {
         dto.setReceiverId(message.getReceiver().getId());
         dto.setReceiverName(message.getReceiver().getName());
         dto.setReceiverAvatar(message.getReceiver().getAvatarUrl());
-        dto.setMessage(message.getMessage());
+        dto.setContent(message.getMessage());  // Changed from setMessage to setContent
         dto.setIsRead(message.getIsRead());
-        dto.setCreatedAt(message.getCreatedAt());
+        dto.setSentAt(message.getCreatedAt());  // Changed from setCreatedAt to setSentAt
         dto.setReadAt(message.getReadAt());
+        
+        // NEW: Set isCurrentUser for frontend
+        dto.setIsCurrentUser(message.getSender().getId().equals(currentUserId));
+        
         return dto;
-    }
-
-    public void deleteMessage(Long messageId, Long userId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteMessage'");
     }
 }

@@ -14,6 +14,7 @@ function ActivityGroupsSection({
   loadingGroups, 
   joinedGroups, 
   onJoinGroup, 
+  onLeaveGroup,
   onOpenGroupDetail 
 }) {
   const groups = backendGroups.length > 0 ? backendGroups : FALLBACK_GROUPS;
@@ -52,17 +53,33 @@ function ActivityGroupsSection({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    className={`btn-join ${isJoined ? 'joined' : ''}`}
-                    style={{ 
-                      backgroundColor: isJoined ? '#10b981' : (group.color || '#10b981') 
-                    }}
-                    onClick={() => !isJoined && onJoinGroup(group.id, group.name)}
-                    disabled={isJoined}
-                  >
-                    {isJoined ? '✓ Joined' : 'Join Group'}
-                  </button>
+                <div className="group-actions">
+                  {!isJoined ? (
+                    <button
+                      className="btn-join"
+                      style={{ 
+                        backgroundColor: group.color || '#10b981'
+                      }}
+                      onClick={() => onJoinGroup(group.id, group.name)}
+                    >
+                      Join Group
+                    </button>
+                  ) : (
+                    <div className="joined-actions">
+                      <button
+                        className="btn-joined"
+                        disabled
+                      >
+                        ✓ Joined
+                      </button>
+                      <button
+                        className="btn-leave"
+                        onClick={() => onLeaveGroup(group.id, group.name)}
+                      >
+                        Leave
+                      </button>
+                    </div>
+                  )}
 
                   {backendGroups.length > 0 && (
                     <button
@@ -87,6 +104,7 @@ ActivityGroupsSection.propTypes = {
   loadingGroups: PropTypes.bool.isRequired,
   joinedGroups: PropTypes.array.isRequired,
   onJoinGroup: PropTypes.func.isRequired,
+  onLeaveGroup: PropTypes.func.isRequired,
   onOpenGroupDetail: PropTypes.func.isRequired
 };
 

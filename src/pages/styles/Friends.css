@@ -1,9 +1,12 @@
 /* ==================== Friends Page Styles ==================== */
 
 .friends-page {
-  min-height: 100vh;
+  min-height: 100vh;      /*  TAM EKRAN */
+  width: 100%;            /* TAM GENİŞLİK */
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   position: relative;
+  overflow-x: hidden;     /* YATAY SCROLL ENGELLE */
+  box-sizing: border-box;
 }
 
 /* Background */
@@ -23,17 +26,20 @@
 .friends-header-bar {
   position: sticky;
   top: 0;
+  left: 0;              /*  SOLA YAPIŞ */
+  right: 0;             /* SAĞA YAPIŞ */
+  width: 100%;          /*  TAM GENİŞLİK */
   z-index: 100;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  padding: 1rem 2rem;
+  padding: 1rem 3%;     /*  YÜZDESEL PADDING */
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
-
 .logo {
   display: flex;
   align-items: center;
@@ -183,11 +189,14 @@
 
 /* Main Container */
 .friends-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+  max-width: 100%;        /*  SINIR YOK */
+  width: 100%;            /*  TAM GENİŞLİK */
+  margin: 0;              /*  YAN MARGIN YOK */
+  padding: 2rem 3%;       /*  YÜZDESEL PADDING */
+  padding-bottom: 80px;   /*  ALT BOŞLUK */
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 /* Title Section */
@@ -400,6 +409,7 @@
 /* Tab Content */
 .tab-content {
   padding: 2rem;
+  padding-bottom: 4rem;   /*  EXTRA ALT BOŞLUK */
   min-height: 400px;
 }
 
@@ -407,10 +417,11 @@
 .friends-grid,
 .requests-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /*  auto-fit */
   gap: 1.5rem;
+  width: 100%;          /* TAM GENİŞLİK */
+  margin-bottom: 2rem;  /* ALT BOŞLUK */
 }
-
 /* Friend Card */
 .friend-card,
 .request-card {
@@ -736,13 +747,16 @@
 
 /* ==================== Responsive Design ==================== */
 
+/* ==================== Responsive Design ==================== */
+
 @media (max-width: 768px) {
   .friends-header-bar {
-    padding: 1rem;
+    padding: 1rem 4%;  /* ✅ Mobilde biraz daha fazla */
   }
 
   .friends-container {
-    padding: 1rem;
+    padding: 1.5rem 4%;
+    padding-bottom: 60px;
   }
 
   .page-title {
@@ -764,7 +778,8 @@
 
   .friends-grid,
   .requests-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr;  /* ✅ Tek sütun */
+    gap: 1rem;
   }
 
   .search-form {
@@ -774,9 +789,23 @@
   .user-name {
     display: none;
   }
+  
+  .tab-content {
+    padding: 1.5rem 1rem;
+    padding-bottom: 3rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .friends-header-bar {
+    padding: 0.75rem 3%;
+  }
+  
+  .friends-container {
+    padding: 1rem 3%;
+    padding-bottom: 40px;
+  }
+
   .page-title {
     font-size: 1.75rem;
   }
@@ -787,148 +816,19 @@
 
   .tab-content {
     padding: 1rem;
+    padding-bottom: 2rem;
   }
 }
 
-.unique-id-search {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-}
-
-.unique-id-form {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.search-input-wrapper {
-  position: relative;
-  flex: 1;
-}
-
-.search-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #667eea;
-  pointer-events: none;
-}
-
-.unique-id-input {
-  padding-left: 45px !important;
-  background: white !important;
-  border: 2px solid transparent !important;
-}
-
-.unique-id-input:focus {
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-}
-
-.unique-id-btn {
-  background: white !important;
-  color: #667eea !important;
-  border: 2px solid white !important;
-  font-weight: 600;
-  padding: 0.75rem 2rem;
-  transition: all 0.3s ease;
-}
-
-.unique-id-btn:hover {
-  background: #667eea !important;
-  color: white !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.unique-id-result {
-  margin-top: 1.5rem;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.result-card.highlight {
-  border: 2px solid white;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.result-unique-id,
-.friend-unique-id,
-.request-unique-id {
-  font-size: 0.9rem;
-  color: #667eea;
-  font-weight: 500;
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.name-search {
-  margin-top: 1.5rem;
-}
-
-/* Dark Mode için */
-.dark-mode .unique-id-search {
-  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-}
-
-.dark-mode .unique-id-input {
-  background: #2d3748 !important;
-  color: white !important;
-  border-color: #4a5568 !important;
-}
-
-.dark-mode .search-icon {
-  color: #90cdf4;
-}
-
-.dark-mode .unique-id-btn {
-  background: #2d3748 !important;
-  color: #90cdf4 !important;
-  border-color: #4a5568 !important;
-}
-
-.dark-mode .unique-id-btn:hover {
-  background: #4a5568 !important;
-  color: white !important;
-}
-
-.dark-mode .result-card.highlight {
-  background: rgba(45, 55, 72, 0.95);
-  border-color: #4a5568;
-}
-
-.dark-mode .result-unique-id,
-.dark-mode .friend-unique-id,
-.dark-mode .request-unique-id {
-  color: #90cdf4;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .unique-id-form {
-    flex-direction: column;
+/* Desktop için */
+@media (min-width: 1025px) {
+  .friends-container {
+    padding: 2rem 3%;
+    padding-bottom: 80px;
   }
   
-  .unique-id-btn {
-    width: 100%;
+  .friends-grid,
+  .requests-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   }
 }

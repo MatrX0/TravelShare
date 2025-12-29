@@ -13,8 +13,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/groups/{groupId}/blogs")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
-public class GroupBlogController {
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://shareway.com.tr", "https://shareway.com.tr", "http://77.245.156.161", "https://77.245.156.161"})
+public class GroupBlogController extends BaseController {
     
     private final GroupBlogService blogService;
     
@@ -47,7 +47,7 @@ public class GroupBlogController {
             @Valid @RequestBody CreateBlogRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
             GroupBlogDTO blog = blogService.createBlog(groupId, userId, request);
             return ResponseEntity.ok(ApiResponse.success("Blog created successfully", blog));
         } catch (Exception e) {
@@ -72,7 +72,7 @@ public class GroupBlogController {
             @Valid @RequestBody CreateBlogRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
             GroupBlogDTO blog = blogService.updateBlog(blogId, userId, request);
             return ResponseEntity.ok(ApiResponse.success("Blog updated successfully", blog));
         } catch (Exception e) {
@@ -87,7 +87,7 @@ public class GroupBlogController {
             @PathVariable Long blogId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = getCurrentUserId(userDetails);
+            Long userId = getCurrentUserId();
             blogService.deleteBlog(blogId, userId);
             return ResponseEntity.ok(ApiResponse.success("Blog deleted successfully", null));
         } catch (Exception e) {
@@ -102,9 +102,5 @@ public class GroupBlogController {
             @RequestParam String keyword) {
         List<GroupBlogDTO> blogs = blogService.searchBlogs(groupId, keyword);
         return ResponseEntity.ok(ApiResponse.success(blogs));
-    }
-    
-    private Long getCurrentUserId(UserDetails userDetails) {
-        return 1L; // TODO: Get from UserDetails
     }
 }

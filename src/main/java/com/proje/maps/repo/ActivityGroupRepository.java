@@ -24,4 +24,8 @@ public interface ActivityGroupRepository extends JpaRepository<ActivityGroup, Lo
     // Check if user is member of group
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM ActivityGroup g JOIN g.members u WHERE g.id = :groupId AND u.id = :userId")
     boolean isUserMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
+    
+    // Count groups that user is member of
+    @Query("SELECT COUNT(g) FROM ActivityGroup g JOIN g.members u WHERE u.id = :userId")
+    Long countGroupsByUserId(@Param("userId") Long userId);
 }

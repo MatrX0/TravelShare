@@ -8,16 +8,16 @@ public class SendDirectMessageRequest {
     @NotNull(message = "Receiver ID is required")
     private Long receiverId;
     
-    @NotBlank(message = "Message cannot be empty")
-    private String message;
+    @NotBlank(message = "Message content cannot be empty")
+    private String content;
     
     // Constructors
     public SendDirectMessageRequest() {
     }
     
-    public SendDirectMessageRequest(Long receiverId, String message) {
+    public SendDirectMessageRequest(Long receiverId, String content) {
         this.receiverId = receiverId;
-        this.message = message;
+        this.content = content;
     }
     
     // Getters and Setters
@@ -29,21 +29,16 @@ public class SendDirectMessageRequest {
         this.receiverId = receiverId;
     }
     
-    public String getMessage() {
-        return message;
+    public String getContent() {
+        return content;
     }
     
-    public void setMessage(String message) {
-        this.message = message;
+    public void setContent(String content) {
+        this.content = content;
     }
     
     @Override
     public String toString() {
         return "SendDirectMessageRequest{receiverId=" + receiverId + '}';
-    }
-
-    public Object getContent() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContent'");
     }
 }

@@ -1,6 +1,5 @@
 package com.proje.maps.security;
 
-import com.proje.maps.api.CustomUserDetails;
 import com.proje.maps.repo.UserJpaRepository;
 import com.proje.maps.resource.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,31 +17,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
     
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Username artık user ID (string olarak)
-        // Önce ID olarak dene
-        try {
-            Long userId = Long.parseLong(username);
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + userId));
-            
-            return new CustomUserDetails(
-                user.getId(),
-                user.getEmail(),
-                user.getPassword(),
-                user.getIsActive()
-            );
-        } catch (NumberFormatException e) {
-            // ID değilse email olarak ara (backward compatibility için)
-            User user = userRepository.findByEmail(username)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
-            
-            return new CustomUserDetails(
-                user.getId(),
-                user.getEmail(),
-                user.getPassword(),
-                user.getIsActive()
-            );
-        }
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+        
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .authorities("USER")
+                .accountExpired(false)
+                .accountLocked(false)
+                .credentialsExpired(false)
+                .disabled(!user.getIsActive())
+                .build();
     }
 }

@@ -4,7 +4,9 @@ import com.proje.maps.dto.*;
 import com.proje.maps.exception.BadRequestException;
 import com.proje.maps.exception.ResourceNotFoundException;
 import com.proje.maps.service.ActivityGroupService;
-import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/groups")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://shareway.com.tr", "https://shareway.com.tr", "http://77.245.156.161", "https://77.245.156.161"})
 @Tag(name = "Activity Groups", description = "Activity group management endpoints")
 public class ActivityGroupController extends BaseController {
     
@@ -53,6 +55,20 @@ public class ActivityGroupController extends BaseController {
         }
     }
     
+    @PostMapping
+    @Operation(summary = "Create group", description = "Create a new activity group")
+    public ResponseEntity<ApiResponse<GroupDTO>> createGroup(@Valid @RequestBody CreateGroupRequest request) {
+        try {
+            Long userId = getCurrentUserId();
+            GroupDTO group = groupService.createGroup(request, userId);
+            return ResponseEntity.ok(ApiResponse.success("Group created successfully", group));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to create group: " + e.getMessage());
+        }
+    }
+    
     @PostMapping("/{groupId}/join")
     @Operation(summary = "Join a group", description = "Add current user to an activity group")
     public ResponseEntity<ApiResponse<GroupDTO>> joinGroup(@PathVariable Long groupId) {
@@ -72,11 +88,16 @@ public class ActivityGroupController extends BaseController {
     public ResponseEntity<ApiResponse<Void>> leaveGroup(@PathVariable Long groupId) {
         try {
             Long userId = getCurrentUserId();
+            System.out.println("[CONTROLLER] Leave group request - groupId: " + groupId + ", userId: " + userId);
             groupService.leaveGroup(groupId, userId);
             return ResponseEntity.ok(ApiResponse.success("Successfully left group", null));
-        } catch (IllegalStateException e) {
+        } catch (RuntimeException e) {
+            System.err.println("[CONTROLLER] Leave group error: " + e.getMessage());
+            e.printStackTrace();
             throw new BadRequestException(e.getMessage());
         } catch (Exception e) {
+            System.err.println("[CONTROLLER] Unexpected error: " + e.getMessage());
+            e.printStackTrace();
             throw new BadRequestException("Failed to leave group: " + e.getMessage());
         }
     }
@@ -117,9 +138,34 @@ public class ActivityGroupController extends BaseController {
             throw new BadRequestException("Failed to search groups: " + e.getMessage());
         }
     }
-
-    private boolean isAuthenticated() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isAuthenticated'");
+    
+    @DeleteMapping("/{groupId}")
+    @Operation(summary = "Delete group", description = "Delete an activity group (admin/creator only)")
+    public ResponseEntity<ApiResponse<Void>> deleteGroup(@PathVariable Long groupId) {
+        try {
+            Long userId = getCurrentUserId();
+            groupService.deleteGroup(groupId, userId);
+            return ResponseEntity.ok(ApiResponse.success("Group deleted successfully", null));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to delete group: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/{groupId}")
+    @Operation(summary = "Update group", description = "Update group details (admin/creator only)")
+    public ResponseEntity<ApiResponse<GroupDTO>> updateGroup(
+            @PathVariable Long groupId,
+            @Valid @RequestBody CreateGroupRequest request) {
+        try {
+            Long userId = getCurrentUserId();
+            GroupDTO group = groupService.updateGroup(groupId, request, userId);
+            return ResponseEntity.ok(ApiResponse.success("Group updated successfully", group));
+        } catch (IllegalStateException e) {
+            throw new BadRequestException(e.getMessage());
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to update group: " + e.getMessage());
+        }
     }
 }

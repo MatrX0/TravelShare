@@ -1,6 +1,5 @@
 package com.proje.maps.resource;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,55 +13,58 @@ public class ActivityGroup {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false, unique = true, length = 100)
-    private String name;
-    
     @Column(nullable = false, length = 100)
-    private String icon; // Emoji: 🥾, ⛰️, 🏕️, 🚗, 🏛️, 🏖️
-    
-    @Column(nullable = false, length = 20)
-    private String color; // #10b981, #3b82f6, etc.
+    private String name;
     
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(length = 100)
+    private String icon;
     
-    // Many-to-Many with Users
-    @JsonIgnore
+    @Column(length = 50)
+    private String color;
+    
+    @Column(length = 50)
+    private String category;
+    
+    @Column(name = "max_members")
+    private Integer maxMembers;
+    
+    @Column(name = "is_private")
+    private Boolean isPrivate = false;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id")
+    private User creator;
+    
     @ManyToMany
     @JoinTable(
-        name = "user_groups",
+        name = "group_members",
         joinColumns = @JoinColumn(name = "group_id"),
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private List<User> members = new ArrayList<>();
     
-    // One-to-Many with GroupChats
-    @JsonIgnore
-    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<GroupChat> chats = new ArrayList<>();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
     
-    // One-to-Many with GroupBlogs
-    @JsonIgnore
-    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<GroupBlog> blogs = new ArrayList<>();
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
     
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
     
     // Constructors
     public ActivityGroup() {
-    }
-    
-    public ActivityGroup(String name, String icon, String color, String description) {
-        this.name = name;
-        this.icon = icon;
-        this.color = color;
-        this.description = description;
     }
     
     // Getters and Setters
@@ -82,6 +84,14 @@ public class ActivityGroup {
         this.name = name;
     }
     
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
     public String getIcon() {
         return icon;
     }
@@ -98,20 +108,36 @@ public class ActivityGroup {
         this.color = color;
     }
     
-    public String getDescription() {
-        return description;
+    public String getCategory() {
+        return category;
     }
     
-    public void setDescription(String description) {
-        this.description = description;
+    public void setCategory(String category) {
+        this.category = category;
     }
     
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public Integer getMaxMembers() {
+        return maxMembers;
     }
     
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setMaxMembers(Integer maxMembers) {
+        this.maxMembers = maxMembers;
+    }
+    
+    public Boolean getIsPrivate() {
+        return isPrivate;
+    }
+    
+    public void setIsPrivate(Boolean isPrivate) {
+        this.isPrivate = isPrivate;
+    }
+    
+    public User getCreator() {
+        return creator;
+    }
+    
+    public void setCreator(User creator) {
+        this.creator = creator;
     }
     
     public List<User> getMembers() {
@@ -122,35 +148,33 @@ public class ActivityGroup {
         this.members = members;
     }
     
-    public List<GroupChat> getChats() {
-        return chats;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
     
-    public void setChats(List<GroupChat> chats) {
-        this.chats = chats;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
     
-    public List<GroupBlog> getBlogs() {
-        return blogs;
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
     
-    public void setBlogs(List<GroupBlog> blogs) {
-        this.blogs = blogs;
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
     
     // Helper methods
-    public int getMemberCount() {
-        return members != null ? members.size() : 0;
-    }
-    
     public void addMember(User user) {
-        if (!members.contains(user)) {
-            members.add(user);
+        if (!this.members.contains(user)) {
+            this.members.add(user);
+            user.getGroups().add(this);
         }
     }
     
     public void removeMember(User user) {
-        members.remove(user);
+        this.members.remove(user);
+        user.getGroups().remove(this);
     }
     
     @Override
@@ -158,8 +182,8 @@ public class ActivityGroup {
         return "ActivityGroup{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
-                ", icon='" + icon + '\'' +
-                ", memberCount=" + getMemberCount() +
+                ", category='" + category + '\'' +
+                ", memberCount=" + (members != null ? members.size() : 0) +
                 '}';
     }
 }

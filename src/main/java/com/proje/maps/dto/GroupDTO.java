@@ -1,31 +1,27 @@
 package com.proje.maps.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class GroupDTO {
     
     private Long id;
     private String name;
-    private String icon;
-    private String color;
     private String description;
+    private String icon;
+    private String color;  // NEW FIELD
+    private String category;
     private Integer memberCount;
-    private Boolean isMember; // Giriş yapan kullanıcı üye mi?
+    private Integer maxMembers;
+    private Boolean isPrivate;
     private LocalDateTime createdAt;
+    private UserDTO creator;
+    private Boolean isMember;
+    private List<UserDTO> members;
+    private Integer blogCount;  // NEW FIELD
     
     // Constructors
     public GroupDTO() {
-    }
-    
-    public GroupDTO(Long id, String name, String icon, String color, String description, Integer memberCount, Boolean isMember, LocalDateTime createdAt) {
-        this.id = id;
-        this.name = name;
-        this.icon = icon;
-        this.color = color;
-        this.description = description;
-        this.memberCount = memberCount;
-        this.isMember = isMember;
-        this.createdAt = createdAt;
     }
     
     // Getters and Setters
@@ -45,6 +41,14 @@ public class GroupDTO {
         this.name = name;
     }
     
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
     public String getIcon() {
         return icon;
     }
@@ -61,12 +65,12 @@ public class GroupDTO {
         this.color = color;
     }
     
-    public String getDescription() {
-        return description;
+    public String getCategory() {
+        return category;
     }
     
-    public void setDescription(String description) {
-        this.description = description;
+    public void setCategory(String category) {
+        this.category = category;
     }
     
     public Integer getMemberCount() {
@@ -77,12 +81,20 @@ public class GroupDTO {
         this.memberCount = memberCount;
     }
     
-    public Boolean getIsMember() {
-        return isMember;
+    public Integer getMaxMembers() {
+        return maxMembers;
     }
     
-    public void setIsMember(Boolean isMember) {
-        this.isMember = isMember;
+    public void setMaxMembers(Integer maxMembers) {
+        this.maxMembers = maxMembers;
+    }
+    
+    public Boolean getIsPrivate() {
+        return isPrivate;
+    }
+    
+    public void setIsPrivate(Boolean isPrivate) {
+        this.isPrivate = isPrivate;
     }
     
     public LocalDateTime getCreatedAt() {
@@ -93,14 +105,44 @@ public class GroupDTO {
         this.createdAt = createdAt;
     }
     
+    public UserDTO getCreator() {
+        return creator;
+    }
+    
+    public void setCreator(UserDTO creator) {
+        this.creator = creator;
+    }
+    
+    public Boolean getIsMember() {
+        return isMember;
+    }
+    
+    public void setIsMember(Boolean isMember) {
+        this.isMember = isMember;
+    }
+    
+    public List<UserDTO> getMembers() {
+        return members;
+    }
+    
+    public void setMembers(List<UserDTO> members) {
+        this.members = members;
+    }
+    
+    public Integer getBlogCount() {
+        return blogCount;
+    }
+    
+    public void setBlogCount(Integer blogCount) {
+        this.blogCount = blogCount;
+    }
+    
     @Override
     public String toString() {
         return "GroupDTO{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
-                ", icon='" + icon + '\'' +
                 ", memberCount=" + memberCount +
-                ", isMember=" + isMember +
                 '}';
     }
 }

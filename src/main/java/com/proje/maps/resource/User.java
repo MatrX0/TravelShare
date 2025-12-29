@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 @Entity
 @Table(name = "users")
@@ -31,9 +30,6 @@ public class User {
     @Column(nullable = false, length = 255)
     private String password;
     
-    @Column(name = "unique_id", nullable = false, unique = true, length = 20)
-    private String uniqueId;
-    
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
     
@@ -45,6 +41,9 @@ public class User {
     
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+    
+    @Column(name = "role", length = 20, nullable = false)
+    private String role = "USER"; // USER or ADMIN
     
     // Many-to-Many with ActivityGroups
     @JsonIgnore
@@ -81,19 +80,14 @@ public class User {
     @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DirectMessage> receivedMessages = new ArrayList<>();
     
+    // One-to-Many with Notifications
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        if (uniqueId == null || uniqueId.isEmpty()) {
-            uniqueId = generateUniqueId();
-        }
-    }
-    
-    // Generate Discord-style unique ID (name#1234)
-    private String generateUniqueId() {
-        Random random = new Random();
-        int randomNum = random.nextInt(10000); // 0-9999
-        return String.format("%s#%04d", name.toLowerCase().replaceAll("\\s+", ""), randomNum);
     }
     
     // Constructors
@@ -125,10 +119,6 @@ public class User {
         return password;
     }
     
-    public String getUniqueId() {
-        return uniqueId;
-    }
-    
     public String getAvatarUrl() {
         return avatarUrl;
     }
@@ -143,6 +133,10 @@ public class User {
     
     public Boolean getIsActive() {
         return isActive;
+    }
+    
+    public String getRole() {
+        return role;
     }
     
     public List<ActivityGroup> getGroups() {
@@ -172,6 +166,10 @@ public class User {
     public List<DirectMessage> getReceivedMessages() {
         return receivedMessages;
     }
+
+    public List<Notification> getNotifications() {
+    return notifications;
+    }
     
     // ==================== SETTERS ====================
     
@@ -191,10 +189,6 @@ public class User {
         this.password = password;
     }
     
-    public void setUniqueId(String uniqueId) {
-        this.uniqueId = uniqueId;
-    }
-    
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
     }
@@ -209,6 +203,10 @@ public class User {
     
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+    
+    public void setRole(String role) {
+        this.role = role;
     }
     
     public void setGroups(List<ActivityGroup> groups) {
@@ -238,6 +236,10 @@ public class User {
     public void setReceivedMessages(List<DirectMessage> receivedMessages) {
         this.receivedMessages = receivedMessages;
     }
+
+    public void setNotifications(List<Notification> notifications) {
+    this.notifications = notifications;
+   }
     
     @Override
     public String toString() {
@@ -245,7 +247,6 @@ public class User {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
-                ", uniqueId='" + uniqueId + '\'' +
                 ", createdAt=" + createdAt +
                 ", isActive=" + isActive +
                 '}';

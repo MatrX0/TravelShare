@@ -4,6 +4,9 @@ import com.proje.maps.dto.*;
 import com.proje.maps.exception.BadRequestException;
 import com.proje.maps.exception.UnauthorizedException;
 import com.proje.maps.service.DirectMessageService;
+import com.proje.maps.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,14 +15,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/messages")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://shareway.com.tr", "https://shareway.com.tr", "http://77.245.156.161", "https://77.245.156.161"})
 @Tag(name = "Direct Messages", description = "Direct messaging endpoints")
 public class DirectMessageController extends BaseController {
     
     private final DirectMessageService messageService;
+    private final NotificationService notificationService;
     
-    public DirectMessageController(DirectMessageService messageService) {
+    public DirectMessageController(DirectMessageService messageService,
+                                   NotificationService notificationService) {
         this.messageService = messageService;
+        this.notificationService = notificationService;
     }
     
     @GetMapping
@@ -67,15 +73,35 @@ public class DirectMessageController extends BaseController {
             }
             
             // Validate message content
-            if (request.getContent() == null || ((String) request.getContent()).trim().isEmpty()) {
+            if (request.getContent() == null || request.getContent().trim().isEmpty()) {
                 throw new BadRequestException("Message content cannot be empty");
             }
             
-            if (((String) request.getContent()).length() > 1000) {
+            if (request.getContent().length() > 1000) {
                 throw new BadRequestException("Message content too long (max 1000 characters)");
             }
             
             DirectMessageDTO message = messageService.sendMessage(senderId, request);
+            
+            // ✨ YENİ: Bildirim oluştur
+            try {
+                // Mesaj içeriğinden kısa bir önizleme oluştur
+                String content = request.getContent();
+                String preview = content.length() > 50 
+                    ? content.substring(0, 50) + "..." 
+                    : content;
+                
+                notificationService.createNotification(
+                    request.getReceiverId(),     // Kime? → Mesaj alan kişi
+                    "MESSAGE",                   // Ne?
+                    "New Message",               // Başlık
+                    preview,                     // Mesaj önizlemesi
+                    message.getId()              // İlgili mesaj ID
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to create notification: " + e.getMessage());
+            }
+            
             return ResponseEntity.ok(ApiResponse.success("Message sent", message));
         } catch (BadRequestException e) {
             throw e;

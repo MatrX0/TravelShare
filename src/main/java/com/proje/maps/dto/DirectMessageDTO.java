@@ -11,9 +11,10 @@ public class DirectMessageDTO {
     private Long receiverId;
     private String receiverName;
     private String receiverAvatar;
-    private String message;
+    private String content;  // Changed from 'message' to 'content'
     private Boolean isRead;
-    private LocalDateTime createdAt;
+    private Boolean isCurrentUser;  // NEW: for frontend
+    private LocalDateTime sentAt;  // Changed from 'createdAt' to match frontend
     private LocalDateTime readAt;
     
     // Constructors
@@ -77,12 +78,12 @@ public class DirectMessageDTO {
         this.receiverAvatar = receiverAvatar;
     }
     
-    public String getMessage() {
-        return message;
+    public String getContent() {
+        return content;
     }
     
-    public void setMessage(String message) {
-        this.message = message;
+    public void setContent(String content) {
+        this.content = content;
     }
     
     public Boolean getIsRead() {
@@ -93,12 +94,20 @@ public class DirectMessageDTO {
         this.isRead = isRead;
     }
     
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public Boolean getIsCurrentUser() {
+        return isCurrentUser;
     }
     
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setIsCurrentUser(Boolean isCurrentUser) {
+        this.isCurrentUser = isCurrentUser;
+    }
+    
+    public LocalDateTime getSentAt() {
+        return sentAt;
+    }
+    
+    public void setSentAt(LocalDateTime sentAt) {
+        this.sentAt = sentAt;
     }
     
     public LocalDateTime getReadAt() {

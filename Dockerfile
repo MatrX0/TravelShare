@@ -15,6 +15,10 @@ RUN npm ci --only=production
 # Copy all source files
 COPY . .
 
+# Build argument for API URL
+ARG VITE_API_URL=https://shareway.com.tr/api
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build the application
 RUN npm run build
 

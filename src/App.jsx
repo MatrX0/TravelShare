@@ -9,7 +9,6 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import MyTrips from './pages/MyTrips';
-import ActivityGroups from './pages/ActivityGroups';
 import GroupDetail from './pages/GroupDetail';
 import Messages from './pages/Messages';
 import Friends from './pages/Friends';
@@ -17,6 +16,8 @@ import Profile from './pages/Profile';
 import Blog from './pages/Blog';
 import Contact from './pages/Contact';
 import Maps from './pages/Maps';
+import ForgotPassword from './pages/ForgotPassword';
+import SharedRoute from './pages/SharedRoute';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -72,7 +73,7 @@ function App() {
       document.body.classList.add('dark-mode');
     }
 
-    // Check for existing user session
+    // Check for existing user local
     const savedUser = authService.getCurrentUser();
     if (savedUser) {
       setUser(savedUser);
@@ -174,6 +175,31 @@ function App() {
     }
   };
 
+  const handleLeaveGroup = async (groupId, groupName) => {
+    if (!user) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Are you sure you want to leave ${groupName}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await api.post(`/groups/${groupId}/leave`);
+      if (response.success) {
+        await fetchUserJoinedGroups(user.id);
+        await fetchBackendGroups();
+        alert(`Successfully left ${groupName}!`);
+      }
+    } catch (error) {
+      console.error('Error leaving group:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      const errorMessage = error.message || error.error || 'Failed to leave group. Please try again.';
+      alert(`Error: ${errorMessage}`);
+    }
+  };
+
   return (
     <Routes>
       {/* Public Routes */}
@@ -189,6 +215,7 @@ function App() {
             loadingGroups={loadingGroups}
             joinedGroups={joinedGroups}
             onJoinGroup={handleJoinGroup}
+            onLeaveGroup={handleLeaveGroup}
           />
         } 
       />
@@ -219,6 +246,9 @@ function App() {
         } 
       />
       
+      {/* Public shared route - no auth required */}
+      <Route path="/shared-route/:shareToken" element={<SharedRoute />} />
+      
       <Route path="/maps" element={<Maps />} />
 
       {/* Protected Routes */}
@@ -227,20 +257,6 @@ function App() {
         element={
           <ProtectedRoute>
             <MyTrips 
-              user={user} 
-              darkMode={darkMode} 
-              toggleDarkMode={toggleDarkMode}
-              onLogout={handleLogout}
-            />
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/activity-groups" 
-        element={
-          <ProtectedRoute>
-            <ActivityGroups 
               user={user} 
               darkMode={darkMode} 
               toggleDarkMode={toggleDarkMode}
@@ -319,6 +335,11 @@ function App() {
             />
           </ProtectedRoute>
         } 
+      />
+
+      <Route
+        path="/ForgotPassword" 
+        element={ <ForgotPassword /> }
       />
 
       {/* 404 - Not Found */}

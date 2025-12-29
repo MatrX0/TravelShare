@@ -15,21 +15,24 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [friends, setFriends] = useState([]);
+  const [allContacts, setAllContacts] = useState([]); // Conversations + Friends without messages
 
   useEffect(() => {
     fetchConversations();
+    fetchFriends();
   }, []);
 
   useEffect(() => {
     // Check if there's a user param in URL (from Friends page)
     const userIdFromUrl = searchParams.get('user');
-    if (userIdFromUrl && conversations.length > 0) {
-      const conversation = conversations.find(c => c.otherUser.id === parseInt(userIdFromUrl));
-      if (conversation) {
-        handleSelectConversation(conversation);
+    if (userIdFromUrl && allContacts.length > 0) {
+      const contact = allContacts.find(c => c.otherUser.id === parseInt(userIdFromUrl));
+      if (contact) {
+        handleSelectConversation(contact);
       }
     }
-  }, [searchParams, conversations]);
+  }, [searchParams, allContacts]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -52,6 +55,7 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
       
       if (response.success && response.data) {
         setConversations(response.data);
+        mergeContactsAndFriends(response.data, friends);
         
         // Auto-select first conversation if available
         if (response.data.length > 0 && !selectedConversation) {
@@ -63,6 +67,44 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFriends = async () => {
+    try {
+      const response = await api.get('/friends');
+      
+      if (response.success && response.data) {
+        setFriends(response.data);
+        mergeContactsAndFriends(conversations, response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching friends:', error);
+    }
+  };
+
+  const mergeContactsAndFriends = (convs, friendsList) => {
+    // Mesaj geçmişi olan kişilerin ID'leri
+    const conversationUserIds = convs.map(c => c.otherUser.id);
+    
+    // Mesajlaşılmamış arkadaşları bul ve konuşma formatına dönüştür
+    const friendsWithoutConversations = friendsList
+      .filter(friend => !conversationUserIds.includes(friend.userId))
+      .map(friend => ({
+        otherUser: {
+          id: friend.userId,  // Backend'den userId geliyor
+          name: friend.name,
+          email: friend.email,
+          avatarUrl: friend.avatarUrl
+        },
+        lastMessage: null,
+        lastMessageTime: null,
+        unreadCount: 0,
+        isNewContact: true // Yeni konuşma başlatılacak işareti
+      }));
+    
+    // Tüm kişileri birleştir (önce conversations, sonra yeni arkadaşlar)
+    const merged = [...convs, ...friendsWithoutConversations];
+    setAllContacts(merged);
   };
 
   const fetchMessages = async (otherUserId) => {
@@ -90,11 +132,13 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
       await api.put(`/messages/${senderId}/read`);
       
       // Update unread count in conversations list
-      setConversations(conversations.map(conv => 
+      const updatedConvs = conversations.map(conv => 
         conv.otherUser.id === senderId 
           ? { ...conv, unreadCount: 0 }
           : conv
-      ));
+      );
+      setConversations(updatedConvs);
+      mergeContactsAndFriends(updatedConvs, friends);
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
@@ -110,8 +154,17 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
     setSendingMessage(true);
 
     try {
+      const receiverId = selectedConversation.otherUser?.id || selectedConversation.otherUser?.userId;
+      
+      if (!receiverId) {
+        alert('Error: Cannot determine receiver ID');
+        setNewMessage(messageContent);
+        setSendingMessage(false);
+        return;
+      }
+      
       const response = await api.post('/messages', {
-        receiverId: selectedConversation.otherUser.id,
+        receiverId: receiverId,
         content: messageContent
       });
 
@@ -120,15 +173,42 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
         setMessages([...messages, response.data]);
         
         // Update conversation's last message
-        setConversations(conversations.map(conv =>
+        const updatedConversations = conversations.map(conv =>
           conv.otherUser.id === selectedConversation.otherUser.id
             ? { ...conv, lastMessage: messageContent, lastMessageTime: new Date() }
             : conv
-        ));
+        );
+        setConversations(updatedConversations);
+        
+        // Eğer yeni bir kontak ise conversations'a ekle
+        if (selectedConversation.isNewContact) {
+          const newConv = {
+            otherUser: selectedConversation.otherUser,
+            lastMessage: messageContent,
+            lastMessageTime: new Date(),
+            unreadCount: 0,
+            isNewContact: false
+          };
+          const newConvs = [newConv, ...conversations.filter(c => c.otherUser.id !== selectedConversation.otherUser.id)];
+          setConversations(newConvs);
+          mergeContactsAndFriends(newConvs, friends);
+          setSelectedConversation(newConv);
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Failed to send message. ';
+      if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else if (error.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Please try again.';
+      }
+      
+      alert(errorMessage);
       // Restore message if failed
       setNewMessage(messageContent);
     } finally {
@@ -163,6 +243,21 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
     return date.toLocaleDateString();
   };
 
+  const backButtonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: darkMode ? '#1e293b' : '#ffffff',
+    border: `2px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+    padding: '10px 20px',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    fontSize: '15px',
+    fontWeight: '600',
+    color: darkMode ? '#f1f5f9' : '#1e293b',
+    transition: 'all 0.3s ease'
+  };
+
   if (loading) {
     return (
       <div className="messages-page dark-mode">
@@ -181,10 +276,23 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
 
       {/* Header */}
       <div className="messages-header-bar">
-        <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <span className="logo-icon">✈️</span>
-          <span className="logo-text">TravelShare</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <button 
+            style={backButtonStyle}
+            onClick={() => navigate("/")}
+            onMouseEnter={(e) => e.target.style.borderColor = '#667eea'}
+            onMouseLeave={(e) => e.target.style.borderColor = darkMode ? '#334155' : '#e2e8f0'}
+          >
+            <span>←</span>
+            <span>Home</span>
+          </button>
+
+          <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <span className="logo-icon">✈️</span>
+            <span className="logo-text">ShareWay</span>
+          </div>
         </div>
+
         <div className="header-right">
           <button className="theme-toggle" onClick={toggleDarkMode}>
             {darkMode ? '☀️' : '🌙'}
@@ -241,39 +349,44 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
           </div>
 
           <div className="conversations-list">
-            {conversations.length === 0 ? (
+            {allContacts.length === 0 ? (
               <div className="empty-conversations">
-                <div className="empty-icon">💬</div>
-                <p>No conversations yet</p>
+                <div className="empty-icon">👥</div>
+                <p>No friends yet</p>
+                <p className="empty-subtitle">Add friends to start messaging!</p>
                 <button className="start-chat-btn" onClick={() => navigate('/friends')}>
-                  Start a conversation
+                  👤 Find Friends
                 </button>
               </div>
             ) : (
-              conversations.map((conversation) => (
+              allContacts.map((contact) => (
                 <div
-                  key={conversation.otherUser.id}
+                  key={contact.otherUser.id}
                   className={`conversation-item ${
-                    selectedConversation?.otherUser.id === conversation.otherUser.id ? 'active' : ''
-                  }`}
-                  onClick={() => handleSelectConversation(conversation)}
+                    selectedConversation?.otherUser.id === contact.otherUser.id ? 'active' : ''
+                  } ${contact.isNewContact ? 'new-contact' : ''}`}
+                  onClick={() => handleSelectConversation(contact)}
                 >
                   <div className="conversation-avatar">
-                    {conversation.otherUser.name.charAt(0).toUpperCase()}
+                    {contact.otherUser.avatarUrl ? (
+                      <img src={contact.otherUser.avatarUrl} alt={contact.otherUser.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      contact.otherUser.name.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div className="conversation-info">
                     <div className="conversation-top">
-                      <h4 className="conversation-name">{conversation.otherUser.name}</h4>
+                      <h4 className="conversation-name">{contact.otherUser.name}</h4>
                       <span className="conversation-time">
-                        {conversation.lastMessageTime ? formatTime(conversation.lastMessageTime) : ''}
+                        {contact.lastMessageTime ? formatTime(contact.lastMessageTime) : ''}
                       </span>
                     </div>
                     <div className="conversation-bottom">
                       <p className="conversation-preview">
-                        {conversation.lastMessage || 'No messages yet'}
+                        {contact.lastMessage || (contact.isNewContact ? 'Start a conversation' : 'No messages yet')}
                       </p>
-                      {conversation.unreadCount > 0 && (
-                        <span className="unread-badge">{conversation.unreadCount}</span>
+                      {contact.unreadCount > 0 && (
+                        <span className="unread-badge">{contact.unreadCount}</span>
                       )}
                     </div>
                   </div>
@@ -291,7 +404,11 @@ function Messages({ user, onLogout, darkMode, toggleDarkMode }) {
               <div className="chat-header">
                 <div className="chat-user-info">
                   <div className="chat-avatar">
-                    {selectedConversation.otherUser.name.charAt(0).toUpperCase()}
+                    {selectedConversation.otherUser.avatarUrl ? (
+                      <img src={selectedConversation.otherUser.avatarUrl} alt={selectedConversation.otherUser.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      selectedConversation.otherUser.name.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div>
                     <h3 className="chat-username">{selectedConversation.otherUser.name}</h3>

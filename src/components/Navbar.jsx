@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import Notifications from './Notifications';  
+import '../pages/styles/Notifications.css';
 
 function Navbar({ user, darkMode, onToggleDarkMode, onLogout }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -22,7 +24,7 @@ function Navbar({ user, darkMode, onToggleDarkMode, onLogout }) {
       <div className="nav-container">
         <Link to="/" className="logo" style={{ textDecoration: 'none' }}>
           <span className="logo-icon">✈️</span>
-          <span className="logo-text">TravelShare</span>
+          <span className="logo-text">ShareWay</span>
         </Link>
         
         <ul className="nav-menu">
@@ -38,7 +40,7 @@ function Navbar({ user, darkMode, onToggleDarkMode, onLogout }) {
             <Link to="/contact" className="nav-link">
               Contact Us
             </Link>
-            </li>
+          </li>
         </ul>
         
         <div className="nav-right">
@@ -51,6 +53,9 @@ function Navbar({ user, darkMode, onToggleDarkMode, onLogout }) {
           >
             {darkMode ? '☀️' : '🌙'}
           </button>
+
+          {/* 🔔 NOTIFICATIONS - BURAYA EKLEDİM */}
+          {user && <Notifications user={user} darkMode={darkMode} />}
 
           {/* User Profile Buttons */}
           {user ? (
@@ -72,9 +77,6 @@ function Navbar({ user, darkMode, onToggleDarkMode, onLogout }) {
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item" onClick={() => handleNavigation('/profile')}>
                     👤 Profile
-                  </button>
-                  <button className="dropdown-item" onClick={() => handleNavigation('/activity-groups')}>
-                    👥 Activity Groups
                   </button>
                   <button className="dropdown-item" onClick={() => handleNavigation('/messages')}>
                     💬 Messages
