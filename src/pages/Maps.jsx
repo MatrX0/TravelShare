@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './styles/Maps.css';
 
-const GOOGLE_API_KEY = "AIzaSyC_qsE40gVc0PeVGXt02SAE8m5Q6temmIk";
+const GOOGLE_API_KEY = "";
 const API_BASE_URL = 'https://shareway.com.tr/api';
 
 function Maps({ user, darkMode, toggleDarkMode, onLogout }) {
