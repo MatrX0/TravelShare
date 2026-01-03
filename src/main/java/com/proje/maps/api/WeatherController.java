@@ -14,7 +14,7 @@ import java.util.Map;
 public class WeatherController {
     
     // OpenWeather API Key - Replace with your own key
-    private static final String OPENWEATHER_API_KEY = "723f3404a3ac4895e22626a0571de053";
+    private static final String OPENWEATHER_API_KEY = "";
     private static final String OPENWEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
     
     private final RestTemplate restTemplate;
